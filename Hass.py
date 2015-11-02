@@ -119,6 +119,8 @@ class Hass (object):
                 return "2;System failed, please wait a minute and try again."
         return result
     
+    def deleteNode(self, clusterId, nodename):
+        
     #def showCluster(self, uuid):
         
     #def setDetector(self):

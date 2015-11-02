@@ -46,7 +46,15 @@ class Recovery (object):
         else:
             logging.info("Recovery Recovery - The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode))
             return "1;The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode)
-    
+            
+    def addNode(self, clusterId, nodeName):
+        try:
+            Recovery.clusterList[clusterId].deleteNode(nodeName)
+            logging.info("Recovery Recovery - The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList))
+            return "0;The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList)
+        except:
+            return "1;Delete node from cluster %s failed." % clusterId
+            logging.error("Recovery Recovery - Delete node from cluster %s failed." % clusterId)
 #    def setDetector(self):
         
     
@@ -62,4 +70,7 @@ class Cluster(object):
         
     def addNode(self, nodeList):
         self.nodeList.extend(nodeList)
+        
+    def deleteNode(self, nodeName):
+        self.nodeList.remove(nodeName)
      
