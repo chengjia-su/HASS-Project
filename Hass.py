@@ -105,6 +105,9 @@ class Hass (object):
 
     def deleteCluster(self, uuid):
         result = recovery.deleteCluster(uuid)
+        
+        db = AccessDB()
+        db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = '%s'" % uuid)
         return result
         
     def addNode(self, clusterId, nodeList):
@@ -117,10 +120,13 @@ class Hass (object):
                     db.writeDB("ha_node", data)
             except:
                 return "2;System failed, please wait a minute and try again."
-        return result
+        return result[0]+";"+result[1]
     
     def deleteNode(self, clusterId, nodename):
-        
+        result = recovery.deleteNode(clusterId, nodename)
+        db = AccessDB()
+        db.deleteData("DELETE FROM ha_node WHERE node_name = '%s' && below_cluster = '%s'" % (nodename, clusterId))
+        return result
     #def showCluster(self, uuid):
         
     #def setDetector(self):
@@ -188,11 +194,14 @@ class AcessDB(object):
         else:
             format = "INSERT INTO ha_node (node_name,below_cluster) VALUES (%(name)s, %(cluster)s);"
         try:
-            cursor.execute(format, data)
+            self.db.execute(format, data)
         except:
             logging.error("Hass AccessDB - write data to DB Failed (MySQL Error: %s)", str(e))
             print "MySQL Error: %s" % str(e)
             raise
+    
+    def deleteData(self, sql):
+        self.db.execute(sql)
     
     def closeDB(self):
         self.db.close()

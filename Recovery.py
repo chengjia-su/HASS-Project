@@ -47,7 +47,7 @@ class Recovery (object):
             logging.info("Recovery Recovery - The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode))
             return "1;The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode)
             
-    def addNode(self, clusterId, nodeName):
+    def deleteNode(self, clusterId, nodeName):
         try:
             Recovery.clusterList[clusterId].deleteNode(nodeName)
             logging.info("Recovery Recovery - The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList))
