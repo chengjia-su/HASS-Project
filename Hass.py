@@ -131,10 +131,6 @@ class Hass (object):
     #def showCluster(self, uuid):
         
     #def setDetector(self):
-
-
-       
-
     
 def main():
     
@@ -142,8 +138,8 @@ def main():
     server.register_introspection_functions()
     server.register_multicall_functions()
     server.register_instance(Hass(), allow_dotted_names=True)
+    pre_running = AcessDB()
     try:
-        pre_running = AcessDB()
         pre_running.readDB()
     finally:
         pre_running.closeDB()

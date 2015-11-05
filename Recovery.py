@@ -7,9 +7,7 @@ class Recovery (object):
 
     clusterList = {}
     
-    def __init__ (self):
-        
-        
+    def __init__ (self):        
         self.novaClient = client.Client(2, "admin", "pdclab!@#$", "admin", "http://10.52.52.50:5000/v2.0")
         
     def createCluster(self, clusterName):
@@ -41,8 +39,8 @@ class Recovery (object):
                 logging.info("Recovery Recovery - The node %s is added to cluster." % ', '.join(str(node) for node in nodeList))
                 return "0;The node %s is added to cluster." % ', '.join(str(node) for node in nodeList)
             except:
-                return "1;Add node to cluster %s failed." % clusterId
                 logging.error("Recovery Recovery - Add node to cluster %s failed." % clusterId)
+                return "1;Add node to cluster %s failed." % clusterId                
         else:
             logging.info("Recovery Recovery - The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode))
             return "1;The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode)
@@ -53,8 +51,8 @@ class Recovery (object):
             logging.info("Recovery Recovery - The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList))
             return "0;The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList)
         except:
-            return "1;Delete node from cluster %s failed." % clusterId
             logging.error("Recovery Recovery - Delete node from cluster %s failed." % clusterId)
+            return "1;Delete node from cluster %s failed." % clusterId      
 #    def setDetector(self):
         
     

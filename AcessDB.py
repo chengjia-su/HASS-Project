@@ -1,6 +1,9 @@
 import logging
-
+import ConfigParser
 import MySQLdb, MySQLdb.cursors
+
+config = ConfigParser.RawConfigParser()
+config.read('hass.conf')
 
 class AcessDB(object):
 
