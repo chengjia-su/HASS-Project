@@ -34,6 +34,7 @@ if not os.path.exists(dir):
 logging.basicConfig(filename=logFilename,level=log_level, format="%(asctime)s [%(levelname)s] : %(message)s")
 recovery = Recovery()
 
+db = AcessDB()
 class RequestHandler(SimpleXMLRPCRequestHandler):
 #Handle RPC request from remote user, and suport access authenticate. 
 #
@@ -89,13 +90,16 @@ class Hass (object):
         
     def createCluster(self, name, nodeList):
         createCluster_result = recovery.createCluster(name).split(";")
-        if createCluster_result[0] == 0:
+        if createCluster_result[0] == "0":
             addNode_result = recovery.addNode(createCluster_result[1], nodeList).split(";")
-            if addNode_result[0] == 0:
+            if addNode_result[0] == "0":
                 try:
-                    db = AccessDB()
-                    data = {"cluster_uuid":createCluster_result[1], "cluster_name":name}
+                    db_uuid = createCluster_result[1].replace("-","")
+                    data = {"cluster_uuid":db_uuid, "cluster_name":name}
                     db.writeDB("ha_cluster", data)
+                    for node in nodeList:
+                        data = {"node_name": node,"below_cluster":db_uuid}
+                        db.writeDB("ha_node", data)
                     return "0;Create HA cluster and add computing node success, cluster uuid is %s" % createCluster_result[1]
                 except:
                     return "2;System failed, please wait a minute and try again."
@@ -106,9 +110,8 @@ class Hass (object):
 
     def deleteCluster(self, uuid):
         result = recovery.deleteCluster(uuid)
-        
-        db = AccessDB()
-        db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = %s", uuid)
+        db_uuid = uuid.replace("-","")
+        db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = %s", db_uuid)
         return result
     
     def listCluster(self):
@@ -117,11 +120,11 @@ class Hass (object):
     
     def addNode(self, clusterId, nodeList):
         result = recovery.addNode(clusterId, nodeList).split(";")
-        if result[0] == 0:
+        if result[0] == "0":
             try:
-                db = AccessDB()
                 for node in nodeList:
-                    data = {"node_name": node,"below_cluster":clusterId}
+                    uuid = clusterId.replace("-", "")
+                    data = {"node_name": node,"below_cluster":uuid}
                     db.writeDB("ha_node", data)
             except:
                 return "2;System failed, please wait a minute and try again."
@@ -129,7 +132,6 @@ class Hass (object):
     
     def deleteNode(self, clusterId, nodename):
         result = recovery.deleteNode(clusterId, nodename)
-        db = AccessDB()
         db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodename, clusterId))
         return result
     #def showCluster(self, uuid):
@@ -142,19 +144,18 @@ def main():
     server.register_introspection_functions()
     server.register_multicall_functions()
     server.register_instance(Hass(), allow_dotted_names=True)
-    pre_running = AcessDB()
     try:
-        pre_running.readDB()
-    finally:
-        pre_running.closeDB()
-    
+        db.readDB()
+    except:
+        print "Access Database Failed"
     
     print "Server ready"
     try:
         server.serve_forever()
     except:
         sys.exit(1)
-    
+    finally:
+        db.closeDB()
     
 if __name__ == "__main__":
     main()

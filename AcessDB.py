@@ -1,5 +1,7 @@
 import logging
 import ConfigParser
+from Recovery import Recovery
+from Recovery import Cluster
 import MySQLdb, MySQLdb.cursors
 
 config = ConfigParser.RawConfigParser()
@@ -52,28 +54,32 @@ class AcessDB(object):
         ha_cluster_date = self.db.fetchall()
         for cluster in ha_cluster_date:
             nodeList = []
-            self.db.execute("SELECT * FROM ha_node WHERE below_cluster = "+cluster["cluster_uuid"])
+            self.db.execute("SELECT * FROM ha_node WHERE below_cluster = '%s'" % cluster["cluster_uuid"])
             ha_node_date = self.db.fetchall()
             for node in ha_node_date:
-                nodeList.append(node[node_name])
-            newCluster = Cluster(uuid = cluster["cluster_uuid"], name = cluster["cluster_name"])
-            recovery.clusterList[cluster["cluster_uuid"]] = newCluster
-            recovery.addNode(cluster["cluster_uuid"], nodeList)
+                nodeList.append(node["node_name"])
+            recovery = Recovery()
+            uuid = cluster["cluster_uuid"][:8]+"-"+cluster["cluster_uuid"][8:12]+"-"+cluster["cluster_uuid"][12:16]+"-"+cluster["cluster_uuid"][16:20]+"-"+cluster["cluster_uuid"][20:]
+            newCluster = Cluster(uuid = uuid, name = cluster["cluster_name"])
+            recovery.clusterList[uuid] = newCluster
+            recovery.addNode(uuid, nodeList)
             
     def writeDB(self, dbname, data):
         if dbname == "ha_cluster":
-            format = "INSERT INTO ha_cluster (cluster_uuid,cluster_name) VALUES (%(uuid)s, %(name)s);"
+            format = "INSERT INTO ha_cluster (cluster_uuid,cluster_name) VALUES (%(cluster_uuid)s, %(cluster_name)s);"
         else:
-            format = "INSERT INTO ha_node (node_name,below_cluster) VALUES (%(name)s, %(cluster)s);"
+            format = "INSERT INTO ha_node (node_name,below_cluster) VALUES (%(node_name)s, %(below_cluster)s);"
         try:
             self.db.execute(format, data)
-        except:
+            self.dbconn.commit()
+        except Exception as e:
             logging.error("Hass AccessDB - write data to DB Failed (MySQL Error: %s)", str(e))
             print "MySQL Error: %s" % str(e)
             raise
     
     def deleteData(self, sql, data):
         self.db.execute(sql, data)
+        self.dbconn.commit()
     
     def closeDB(self):
         self.db.close()

@@ -20,14 +20,17 @@ class Recovery (object):
     def deleteCluster(self, uuid):
         try:
             del Recovery.clusterList[uuid]
-            logging.info("Recovery Recovery - The cluster %s is deleted." % id)
-            return "0;The cluster %s is deleted." % id
+            logging.info("Recovery Recovery - The cluster %s is deleted." % uuid)
+            return "0;The cluster %s is deleted." % uuid
         except:
-            logging.info("Recovery Recovery - The cluster is not found (uuid = %s)." % id)
-            return "1;The cluster is not found (uuid = %s)." % id
+            logging.info("Recovery Recovery - The cluster is not found (uuid = %s)." % uuid)
+            return "1;The cluster is not found (uuid = %s)." % uuid
         
     def listCluster(self):
-        return clusterList
+        result = []
+        for uuid, cluster in Recovery.clusterList.iteritems() :
+            result.append((uuid, cluster.name))
+        return result
         
     def addNode(self, clusterId, nodeList):
         hypervisorList = self.novaClient.hypervisors.list()
