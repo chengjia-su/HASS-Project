@@ -26,6 +26,9 @@ class Recovery (object):
             logging.info("Recovery Recovery - The cluster is not found (uuid = %s)." % id)
             return "1;The cluster is not found (uuid = %s)." % id
         
+    def listCluster(self):
+        return clusterList
+        
     def addNode(self, clusterId, nodeList):
         hypervisorList = self.novaClient.hypervisors.list()
         hostList = []

@@ -110,7 +110,11 @@ class Hass (object):
         db = AccessDB()
         db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = %s", uuid)
         return result
-        
+    
+    def listCluster(self):
+        result = recovery.listCluster()
+        return result
+    
     def addNode(self, clusterId, nodeList):
         result = recovery.addNode(clusterId, nodeList).split(";")
         if result[0] == 0:

@@ -16,8 +16,7 @@ class HassTest(unittest.TestCase):
         self.authFailedUrl = "http://auth:failed@127.0.0.1:"+self.config.get("rpc", "rpc_bind_port")
         self.authSuccessUrl = "http://"+self.config.get("rpc", "rpc_username")+":"+self.config.get("rpc", "rpc_password")+"@127.0.0.1:"+self.config.get("rpc", "rpc_bind_port")
         self.clusterName = "TestCluster-%s" % datetime.datetime.now().strftime("%Y/%m/%d-%H:%M")
-        self.trueNodeList = ["compute1", "compute2"]
-#        
+        self.trueNodeList = ["compute1", "compute2"]        
         
     def test_noAuthHeader (self):
         server = xmlrpclib.ServerProxy(self.noAuthUrl)
