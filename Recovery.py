@@ -45,8 +45,8 @@ class Recovery (object):
                 logging.info("Recovery Recovery - The node %s is added to cluster." % ', '.join(str(node) for node in nodeList))
                 return "0;The node %s is added to cluster." % ', '.join(str(node) for node in nodeList)
             except:
-                logging.error("Recovery Recovery - Add node to cluster %s failed." % clusterId)
-                return "1;Add node to cluster %s failed." % clusterId                
+                logging.info("Recovery Recovery - The cluster is not found (uuid = %s)." % clusterId)
+                return "1;The cluster is not found (uuid = %s)." % clusterId                
         else:
             logging.info("Recovery Recovery - The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode))
             return "1;The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode)
@@ -57,8 +57,15 @@ class Recovery (object):
             logging.info("Recovery Recovery - The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList))
             return "0;The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList)
         except:
-            logging.error("Recovery Recovery - Delete node from cluster %s failed." % clusterId)
-            return "1;Delete node from cluster %s failed." % clusterId      
+            logging.info("Recovery Recovery - Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId)
+            return "1;Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId
+
+    def listNode(self, clusterId):
+        try:
+            nodeList = Recovery.clusterList[clusterId].getNode()
+            return "0;"+nodeList
+        except:
+            return "1;The cluster is not found. (uuid = %s)" % clusterId
 #    def setDetector(self):
         
     
@@ -77,4 +84,8 @@ class Cluster(object):
         
     def deleteNode(self, nodeName):
         self.nodeList.remove(nodeName)
+    
+    def getNode(self):
+        nodeStr = ','.join(self.nodeList)
+        return nodeStr
      

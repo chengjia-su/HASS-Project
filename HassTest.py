@@ -60,7 +60,7 @@ class RecoveryCreateClusterTest(unittest.TestCase):
         self.assertEqual(self.recovery.addNode("123456789", self.trueNodeList).split(";")[0], "1")
     
     def test_addNode_WrongNodeList(self):
-        self.assertEqual(self.recovery.addNode("123456789", self.falseNodeList).split(";")[0], "1")
+        self.assertEqual(self.recovery.addNode(self.uuid, self.falseNodeList).split(";")[0], "1")
     
     def tearDown(self):
         import MySQLdb

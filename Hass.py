@@ -92,19 +92,24 @@ class Hass (object):
         createCluster_result = recovery.createCluster(name).split(";")
         if createCluster_result[0] == "0":
             addNode_result = recovery.addNode(createCluster_result[1], nodeList).split(";")
+            try:
+                db_uuid = createCluster_result[1].replace("-","")
+                data = {"cluster_uuid":db_uuid, "cluster_name":name}
+                db.writeDB("ha_cluster", data)
+            except:
+                logging.error("Hass Hass - Access database failed.")
+                return "1;Access database failed, please wait a minute and try again."
             if addNode_result[0] == "0":
                 try:
-                    db_uuid = createCluster_result[1].replace("-","")
-                    data = {"cluster_uuid":db_uuid, "cluster_name":name}
-                    db.writeDB("ha_cluster", data)
                     for node in nodeList:
                         data = {"node_name": node,"below_cluster":db_uuid}
                         db.writeDB("ha_node", data)
                     return "0;Create HA cluster and add computing node success, cluster uuid is %s" % createCluster_result[1]
                 except:
-                    return "2;System failed, please wait a minute and try again."
+                    logging.error("Hass Hass - Access database failed.")
+                    return "1;Access database failed, please wait a minute and try again."
             else:
-                return addNode_result[0]+";"+addNode_result[1]
+                return "0;The cluster is created.(uuid = %s ) but"+addNode_result[1] % createCluster_result[1]
         else:
             return createCluster_result[0]+";"+createCluster_result[1]
 
@@ -123,8 +128,8 @@ class Hass (object):
         if result[0] == "0":
             try:
                 for node in nodeList:
-                    uuid = clusterId.replace("-", "")
-                    data = {"node_name": node,"below_cluster":uuid}
+                    db_uuid = clusterId.replace("-", "")
+                    data = {"node_name": node,"below_cluster":db_uuid}
                     db.writeDB("ha_node", data)
             except:
                 return "2;System failed, please wait a minute and try again."
@@ -132,7 +137,12 @@ class Hass (object):
     
     def deleteNode(self, clusterId, nodename):
         result = recovery.deleteNode(clusterId, nodename)
-        db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodename, clusterId))
+        db_uuid = clusterId.replace("-", "")
+        db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodename, db_uuid))
+        return result
+        
+    def listNode(self, clusterId) :
+        result = recovery.listNode(clusterId)
         return result
     #def showCluster(self, uuid):
         

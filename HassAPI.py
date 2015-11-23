@@ -16,14 +16,25 @@ def main():
     parser = argparse.ArgumentParser(description='Openstack high availability software service(HASS)')
     subparsers = parser.add_subparsers(help='functions of HASS', dest='command')
     
-    parser_create_cluster = subparsers.add_parser('cluster-create', help='Create a HA cluster')
-    parser_create_cluster.add_argument("-n", "--name", help="HA cluster name")
-    parser_create_cluster.add_argument("-c", "--nodes", help="Computing nodes you want to add to cluster. Use ',' to separate nodes name")
+    parser_cluster_create = subparsers.add_parser('cluster-create', help='Create a HA cluster')
+    parser_cluster_create.add_argument("-n", "--name", help="HA cluster name")
+    parser_cluster_create.add_argument("-c", "--nodes", help="Computing nodes you want to add to cluster. Use ',' to separate nodes name")
 
-    parser_delete_cluster = subparsers.add_parser('cluster-delete', help='Delete a HA cluster')
-    parser_delete_cluster.add_argument("-i", "--uuid", help="Cluster uuid you want to delete")
+    parser_cluster_delete = subparsers.add_parser('cluster-delete', help='Delete a HA cluster')
+    parser_cluster_delete.add_argument("-i", "--uuid", help="Cluster uuid you want to delete")
     
-    parser_list_cluster = subparsers.add_parser('cluster-list', help='List all HA cluster')
+    parser_cluster_list = subparsers.add_parser('cluster-list', help='List all HA cluster')
+    
+    parser_node_add = subparsers.add_parser('node-add', help='Add computing node to HA cluster')
+    parser_node_add.add_argument("-i", "--uuid", help="HA cluster uuid")
+    parser_node_add.add_argument("-c", "--nodes", help="Computing nodes you want to add to cluster. Use ',' to separate nodes name")
+    
+    parser_node_delete = subparsers.add_parser('node-delete', help='Delete computing node from HA cluster')
+    parser_node_delete.add_argument("-i", "--uuid", help="HA cluster uuid")
+    parser_node_delete.add_argument("-c", "--node", help="A computing node you want to delete from cluster.")
+    
+    parser_node_list = subparsers.add_parser('node-list', help='List all computing nodes of Ha cluster')
+    parser_node_list.add_argument("-i", "--uuid", help="HA cluster uuid")
     
     args = parser.parse_args()
     
@@ -41,5 +52,27 @@ def main():
         for (uuid, name) in result :
             table.add_row([uuid, name])
         print table
+        
+    elif args.command == "node-add" :
+        result = server.addNode(args.uuid, args.nodes.strip().split(","))
+        print result
+        
+    elif args.command == "node-delete" :
+        result = server.deleteNode(args.uuid, args.node)
+        print result
+        
+    elif args.command == "node-list" :
+        result = server.listNode(args.uuid)
+        if result.split(";")[0] == 0 :
+            print "Cluster uuid : " + args.uuid
+            table = PrettyTable(["Count","Nodes of HA Cluster"])
+            counter = 0
+            for node in result.split(";")[1].split(",") :
+                counter = counter + 1
+                table.add_row([str(counter),node])
+            print table
+        else :
+            print result
+    
 if __name__ == "__main__":
     main()
