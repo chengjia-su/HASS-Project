@@ -23,20 +23,26 @@ from Recovery import Recovery
 from Recovery import Cluster
 from AcessDB import AcessDB
 
+# Declare the configure file here. if you want to change configure file name, please modify scond line.
 config = ConfigParser.RawConfigParser()
 config.read('hass.conf')
 
+# Set log file here. if you want to change log format, please modify sixth line.
 log_level = logging.getLevelName(config.get("log", "level"))
 logFilename=config.get("log", "location")
 dir = os.path.dirname(logFilename)
 if not os.path.exists(dir):
     os.makedirs(dir)
 logging.basicConfig(filename=logFilename,level=log_level, format="%(asctime)s [%(levelname)s] : %(message)s")
+
+# Declare Recovery class. You need to ensure that there is only one object. So I declare it as global variable.
 recovery = Recovery()
 
+# Declare database access class. When it initialize, connecting database and creating table. You need to ensure new it just one times.
 db = AcessDB()
+
 class RequestHandler(SimpleXMLRPCRequestHandler):
-#Handle RPC request from remote user, and suport access authenticate. 
+#   Handle RPC request from remote user, and suport access authenticate. 
 #
 #   HTTP basic access authentication are encoded with Base64 in transit, but not
 #   encrypted or hashed in any way. Authentication field contain authentication
@@ -45,6 +51,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
 #   return 401 error code. Otherwise, handle request and return response.
 
     def __init__(self, request, client_address, server):
+    # initialize rpc server and get client ip address. call parent initial method.
         rpc_paths = ('/RPC2',)
         self.clientip = client_address[0]
         SimpleXMLRPCRequestHandler.__init__(self, request, client_address, server)
@@ -87,7 +94,9 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
         
 
 class Hass (object):
-        
+#   The SimpleRPCServer class
+#   Declare method here, and client can call it directly. 
+
     def createCluster(self, name, nodeList):
         createCluster_result = recovery.createCluster(name).split(";")
         if createCluster_result[0] == "0":

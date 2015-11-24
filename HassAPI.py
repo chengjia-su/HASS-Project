@@ -17,24 +17,24 @@ def main():
     subparsers = parser.add_subparsers(help='functions of HASS', dest='command')
     
     parser_cluster_create = subparsers.add_parser('cluster-create', help='Create a HA cluster')
-    parser_cluster_create.add_argument("-n", "--name", help="HA cluster name")
+    parser_cluster_create.add_argument("-n", "--name", help="HA cluster name", required=True)
     parser_cluster_create.add_argument("-c", "--nodes", help="Computing nodes you want to add to cluster. Use ',' to separate nodes name")
 
     parser_cluster_delete = subparsers.add_parser('cluster-delete', help='Delete a HA cluster')
-    parser_cluster_delete.add_argument("-i", "--uuid", help="Cluster uuid you want to delete")
+    parser_cluster_delete.add_argument("-i", "--uuid", help="Cluster uuid you want to delete", required=True)
     
     parser_cluster_list = subparsers.add_parser('cluster-list', help='List all HA cluster')
     
     parser_node_add = subparsers.add_parser('node-add', help='Add computing node to HA cluster')
-    parser_node_add.add_argument("-i", "--uuid", help="HA cluster uuid")
-    parser_node_add.add_argument("-c", "--nodes", help="Computing nodes you want to add to cluster. Use ',' to separate nodes name")
+    parser_node_add.add_argument("-i", "--uuid", help="HA cluster uuid", required=True)
+    parser_node_add.add_argument("-c", "--nodes", help="Computing nodes you want to add to cluster. Use ',' to separate nodes name", required=True)
     
     parser_node_delete = subparsers.add_parser('node-delete', help='Delete computing node from HA cluster')
-    parser_node_delete.add_argument("-i", "--uuid", help="HA cluster uuid")
-    parser_node_delete.add_argument("-c", "--node", help="A computing node you want to delete from cluster.")
+    parser_node_delete.add_argument("-i", "--uuid", help="HA cluster uuid", required=True)
+    parser_node_delete.add_argument("-c", "--node", help="A computing node you want to delete from cluster.", required=True)
     
     parser_node_list = subparsers.add_parser('node-list', help='List all computing nodes of Ha cluster')
-    parser_node_list.add_argument("-i", "--uuid", help="HA cluster uuid")
+    parser_node_list.add_argument("-i", "--uuid", help="HA cluster uuid", required=True)
     
     args = parser.parse_args()
     
