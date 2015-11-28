@@ -1,5 +1,5 @@
 from setuptools import setup
-
+from setuptools import find_packages
 setup(
     name = 'Hass',
     version = '0.1',
@@ -7,6 +7,7 @@ setup(
     author = 'chengjia',
     url = '',
     license = 'Apache-2.0',
-    packages = ['HassAPI'],
-    entry_points = {'console_scripts': ['hass = HassAPI.HassAPI',],},
+    packages = find_packages(),
+    py_modules = ['HassAPI'],
+    entry_points = {'console_scripts': ['hass = HassAPI:main',],},
 )

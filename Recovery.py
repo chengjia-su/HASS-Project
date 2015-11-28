@@ -54,8 +54,8 @@ class Recovery (object):
     def deleteNode(self, clusterId, nodeName):
         try:
             Recovery.clusterList[clusterId].deleteNode(nodeName)
-            logging.info("Recovery Recovery - The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList))
-            return "0;The node %s is deleted from cluster." % ', '.join(str(node) for node in nodeList)
+            logging.info("Recovery Recovery - The node %s is deleted from cluster." % nodeName)
+            return "0;The node %s is deleted from cluster." % nodeName
         except:
             logging.info("Recovery Recovery - Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId)
             return "1;Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId

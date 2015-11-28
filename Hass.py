@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 """This module will read data from database, update data according environment, 
 and read configuration file in the beginning. It is a service that listen to user
 request and support authentication by HTTP portocal basic access authentication.
@@ -118,7 +115,7 @@ class Hass (object):
                     logging.error("Hass Hass - Access database failed.")
                     return "1;Access database failed, please wait a minute and try again."
             else:
-                return "0;The cluster is created.(uuid = %s ) but"+addNode_result[1] % createCluster_result[1]
+                return "0;The cluster is created.(uuid = "+createCluster_result[1]+") But,"+ addNode_result[1]
         else:
             return createCluster_result[0]+";"+createCluster_result[1]
 

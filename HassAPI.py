@@ -1,11 +1,14 @@
-#!/usr/bin/env python
-
 import xmlrpclib
 import ConfigParser
 import argparse
 
 from prettytable import PrettyTable
 
+class bcolors:
+    OK = '\033[92m'
+    ERROR = '\033[91m'
+    END = '\033[0m'
+    
 def main():
 
     config = ConfigParser.RawConfigParser()
@@ -39,12 +42,12 @@ def main():
     args = parser.parse_args()
     
     if args.command == "cluster-create" :
-        result = server.createCluster(args.name, args.nodes.strip().split(","))
-        print result
+        result = server.createCluster(args.name, args.nodes.strip().split(",")).split(";")
+        print showResult(result)
     
     elif args.command == "cluster-delete" :
-        result = server.deleteCluster(args.uuid)
-        print result
+        result = server.deleteCluster(args.uuid).split(";")
+        print showResult(result)
         
     elif args.command == "cluster-list" :
         result = server.listCluster()
@@ -54,25 +57,32 @@ def main():
         print table
         
     elif args.command == "node-add" :
-        result = server.addNode(args.uuid, args.nodes.strip().split(","))
-        print result
+        result = server.addNode(args.uuid, args.nodes.strip().split(",")).split(";")
+        print showResult(result)
         
     elif args.command == "node-delete" :
-        result = server.deleteNode(args.uuid, args.node)
-        print result
+        result = server.deleteNode(args.uuid, args.node).split(";")
+        print showResult(result)
         
     elif args.command == "node-list" :
         result = server.listNode(args.uuid)
-        if result.split(";")[0] == 0 :
+        if result.split(";")[0] == '0' :
             print "Cluster uuid : " + args.uuid
             table = PrettyTable(["Count","Nodes of HA Cluster"])
             counter = 0
             for node in result.split(";")[1].split(",") :
                 counter = counter + 1
-                table.add_row([str(counter),node])
+                if node != '':
+                    table.add_row([str(counter),node])
             print table
         else :
             print result
+            
+def showResult(result):
+    if result[0] == '0' :
+        return bcolors.OK + "[Success] " + bcolors.END + result[1]
+    else :
+        return bcolors.ERROR + "[Error] " + bcolors.END +result[1]
     
 if __name__ == "__main__":
     main()
