@@ -1,31 +1,44 @@
 Detection Agent Pseudocode
 
-class detection_agent():
+------------------------------------------------------------------
+Algorithm 1  Detect host live
+------------------------------------------------------------------
+input:  remote request
+output: ACK message
+
+def polling_ack(request):
+    while (True) :
+        if request == accept_request:
+            return ACK
+------------------------------------------------------------------
+
+
+------------------------------------------------------------------
+Algorithm 2  Detect local host sorftware failure
+------------------------------------------------------------------
+input:  None
+output: Failure event
+
+def event_report():
+    if detect() == False:
+        report_controller_HASS(failure event)
+
+def detect():
+    status = False
+    failure_message = None
     
-    def polling_ack():
-        while (True) :
-            if request == accept_request:
-                return "ack"
+    if detect_nova_status == disable:
+        failure_message = "Openstack nova-compute service failure"
 
-    def event_report():
-        if detect() == False:
-            report_controller_HASS(failure event)
+    elif detect_libvirt_connection == disconnection :
+        failure_message = "Libvirt failure"
 
-    def detect():
-        status = False
-        failure_message = None
-        
-        if detect_nova_status == disable:
-            failure_message = "Openstack nova-compute service failure"
+    elif detect_qemu-kvm_process == None :
+        failure_message = "qemu-kvm failure"
 
-        elif detect_libvirt_connection == disconnection :
-            failure_message = "Libvirt failure"
-
-        elif detect_qemu-kvm_process == None :
-            failure_message = "qemu-kvm failure"
-
-        else :
-            status = True
-        record_log("failure_message")
-        return (status)
+    else :
+        status = True
+    record_log("failure_message")
+    return (status)
+------------------------------------------------------------------
         
