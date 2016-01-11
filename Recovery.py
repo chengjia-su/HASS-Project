@@ -6,9 +6,14 @@ import logging
 class Recovery (object):
 
     clusterList = {}
+
     
     def __init__ (self):        
         self.novaClient = client.Client(2, "admin", "pdclab!@#$", "admin", "http://10.52.52.50:5000/v2.0")
+        hypervisorList = self.novaClient.hypervisors.list()
+        self.hostList = []
+        for hypervisor in hypervisorList:
+            hostList.append(str(hypervisor.hypervisor_hostname))
         
     def createCluster(self, clusterName):
         import uuid
@@ -33,16 +38,13 @@ class Recovery (object):
         return result
         
     def addNode(self, clusterId, nodeList):
-        hypervisorList = self.novaClient.hypervisors.list()
-        hostList = []
-        for hypervisor in hypervisorList:
-            hostList.append(str(hypervisor.hypervisor_hostname))
         
-        notMatchNode = [nodeName for nodeName in nodeList if nodeName not in hostList]
+        notMatchNode = [nodeName for nodeName in nodeList if nodeName not in self.hostList]
         if not notMatchNode:
             try:
                 Recovery.clusterList[clusterId].addNode(nodeList)
                 logging.info("Recovery Recovery - The node %s is added to cluster." % ', '.join(str(node) for node in nodeList))
+                self.hostList = [nodeName for nodeName in self.hostList if nodeName not in nodeList]
                 return "0;The node %s is added to cluster." % ', '.join(str(node) for node in nodeList)
             except:
                 logging.info("Recovery Recovery - The cluster is not found (uuid = %s)." % clusterId)
@@ -66,6 +68,10 @@ class Recovery (object):
             return "0;"+nodeList
         except:
             return "1;The cluster is not found. (uuid = %s)" % clusterId
+            
+    def addInstance(self, image, flavor, network, ):
+    
+    
 #    def setDetector(self):
         
     

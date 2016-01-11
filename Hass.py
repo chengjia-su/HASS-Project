@@ -150,7 +150,6 @@ class Hass (object):
     def listNode(self, clusterId) :
         result = recovery.listNode(clusterId)
         return result
-    #def showCluster(self, uuid):
         
     #def setDetector(self):
     
