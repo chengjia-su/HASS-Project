@@ -23,7 +23,6 @@ class DetectionManager():
         except (KeyboardInterrupt, SystemExit):
             print '\n! Received keyboard interrupt, quitting threads.\n'
         
-        
     def pollingCancel(self, id, node):
         newthreadList = []
         for nodeInfo in self.threadList:

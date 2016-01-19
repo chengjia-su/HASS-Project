@@ -95,61 +95,64 @@ class Hass (object):
 #   Declare method here, and client can call it directly. 
 
     def createCluster(self, name, nodeList):
-        createCluster_result = recovery.createCluster(name).split(";")
-        if createCluster_result[0] == "0":
-            addNode_result = recovery.addNode(createCluster_result[1], nodeList).split(";")
+        createCluster_result = recovery.createCluster(name)
+        if createCluster_result["code"] == "0":
+            addNode_result = recovery.addNode(createCluster_result["clusterId"], nodeList)
             try:
-                db_uuid = createCluster_result[1].replace("-","")
+                db_uuid = createCluster_result["clusterId"].replace("-","")
                 data = {"cluster_uuid":db_uuid, "cluster_name":name}
                 db.writeDB("ha_cluster", data)
             except:
                 logging.error("Hass Hass - Access database failed.")
                 return "1;Access database failed, please wait a minute and try again."
-            if addNode_result[0] == "0":
+            if addNode_result["code"] == "0":
                 try:
                     for node in nodeList:
                         data = {"node_name": node,"below_cluster":db_uuid}
                         db.writeDB("ha_node", data)
-                    return "0;Create HA cluster and add computing node success, cluster uuid is %s" % createCluster_result[1]
+                    return "0;Create HA cluster and add computing node success, cluster uuid is %s" % createCluster_result["clusterId"]
                 except:
                     logging.error("Hass Hass - Access database failed.")
                     return "1;Access database failed, please wait a minute and try again."
             else:
-                return "0;The cluster is created.(uuid = "+createCluster_result[1]+") But,"+ addNode_result[1]
+                return "0;The cluster is created.(uuid = "+createCluster_result["clusterId"]+") But,"+ addNode_result["message"]
         else:
-            return createCluster_result[0]+";"+createCluster_result[1]
+            return createCluster_result["code"]+";"+createCluster_result["clusterId"]
 
     def deleteCluster(self, uuid):
         result = recovery.deleteCluster(uuid)
         db_uuid = uuid.replace("-","")
         db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = %s", db_uuid)
-        return result
+        return result["code"]+";"+result["message"]
     
     def listCluster(self):
         result = recovery.listCluster()
         return result
     
     def addNode(self, clusterId, nodeList):
-        result = recovery.addNode(clusterId, nodeList).split(";")
-        if result[0] == "0":
+        result = recovery.addNode(clusterId, nodeList)
+        if result["code"] == "0":
             try:
                 for node in nodeList:
                     db_uuid = clusterId.replace("-", "")
                     data = {"node_name": node,"below_cluster":db_uuid}
                     db.writeDB("ha_node", data)
             except:
-                return "2;System failed, please wait a minute and try again."
-        return result[0]+";"+result[1]
+                return "2;System failed, please wait a minute and try again.(DB Exception)"
+        return result["code"]+";"+result["message"]
     
     def deleteNode(self, clusterId, nodename):
         result = recovery.deleteNode(clusterId, nodename)
         db_uuid = clusterId.replace("-", "")
         db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodename, db_uuid))
-        return result
+        return result["code"]+";"+result["message"]
         
     def listNode(self, clusterId) :
         result = recovery.listNode(clusterId)
-        return result
+        if result["code"]== "0":
+            return result["code"]+";"+result["nodeList"]
+        else:
+            return result["code"]+";"+result["message"]
     
     #def addInstance(self, clusterId, instanceId)
         
