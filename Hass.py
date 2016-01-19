@@ -150,8 +150,10 @@ class Hass (object):
     def listNode(self, clusterId) :
         result = recovery.listNode(clusterId)
         return result
+    
+    #def addInstance(self, clusterId, instanceId)
         
-    #def setDetector(self):
+
     
 def main():
     

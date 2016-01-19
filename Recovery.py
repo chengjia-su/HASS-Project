@@ -1,19 +1,24 @@
 from novaclient import client
 from keystoneclient.auth.identity import v2
-from novaclient import client
 import logging
+import ConfigParser
+
+from DetectionManager import DetectionManager
 
 class Recovery (object):
 
     clusterList = {}
 
-    
-    def __init__ (self):        
-        self.novaClient = client.Client(2, "admin", "pdclab!@#$", "admin", "http://10.52.52.50:5000/v2.0")
+    def __init__ (self):
+        self.config = ConfigParser.RawConfigParser()
+        self.config.read('hass.conf')
+        
+        self.novaClient = client.Client(2, self.config.get("openstack", "openstack_admin_account"), self.config.get("openstack", "openstack_admin_password"), self.config.get("openstack", "openstack_admin_account"), "http://controller:5000/v2.0")
         hypervisorList = self.novaClient.hypervisors.list()
         self.hostList = []
         for hypervisor in hypervisorList:
-            hostList.append(str(hypervisor.hypervisor_hostname))
+            self.hostList.append(str(hypervisor.hypervisor_hostname))
+        
         
     def createCluster(self, clusterName):
         import uuid
@@ -69,12 +74,13 @@ class Recovery (object):
         except:
             return "1;The cluster is not found. (uuid = %s)" % clusterId
             
-    def addInstance(self, image, flavor, network, ):
-    
-    
-#    def setDetector(self):
-        
-    
+    def addInstance(self, clusterId, instanceId):
+        if self.novaClient.volumes.get_server_volumes(instanceId) == [] :
+            logging.info("Recovery Recovery - The instance can not be protected. (No volume)")
+            return "1;The instance can not be protected. (No volume)"
+        #else :
+    def recoveryNode(self, clusterId, nodeName):
+        print "Recovery"       
     
 class Cluster(object):
 
@@ -83,12 +89,15 @@ class Cluster(object):
         self.name = name
         self.nodeList = []
         self.instanceList = []
-
+        self.detect = DetectionManager()
         
     def addNode(self, nodeList):
+        for node in nodeList :
+            self.detect.pollingRegister(self.id, node)
         self.nodeList.extend(nodeList)
         
     def deleteNode(self, nodeName):
+        self.detect.pollingCancel(self.id, nodeName)
         self.nodeList.remove(nodeName)
     
     def getNode(self):

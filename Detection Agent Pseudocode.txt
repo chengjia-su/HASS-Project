@@ -1,7 +1,7 @@
 Detection Agent Pseudocode
 
 ------------------------------------------------------------------
-Algorithm 1  Detect host live
+Algorithm 1  Detect host
 ------------------------------------------------------------------
 input:  remote request
 output: ACK message
@@ -14,7 +14,7 @@ def polling_ack(request):
 
 
 ------------------------------------------------------------------
-Algorithm 2  Detect local host sorftware failure
+Algorithm 2  Detect local host sorftware
 ------------------------------------------------------------------
 input:  None
 output: Failure event
