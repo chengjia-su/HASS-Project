@@ -15,7 +15,7 @@ class DetectionManager():
         self.threadList = []
         
     def pollingRegister(self, id, node):
-        nodeInfo = {"id":id, "node":node, "thread":PollingThread(self.config.get("detection","polling_interval"), self.config.get("detection","polling_threshold"), id, node)}
+        nodeInfo = {"id":id, "node":node, "thread":PollingThread(self.config.get("detection","polling_interval"), self.config.get("detection","polling_threshold"), id, node, int(self.config.get("detection","polling_port")))}
         self.threadList.append(nodeInfo)
         try:
             nodeInfo["thread"].daemon=True
@@ -27,13 +27,16 @@ class DetectionManager():
         newthreadList = []
         for nodeInfo in self.threadList:
             if nodeInfo["id"] == id and nodeInfo["node"]== node :
-                nodeInfo["thread"].exit()
+                try:
+                    nodeInfo["thread"].exit()
+                except:
+                    pass
             else :
                 newthreadList.append(nodeInfo)
         self.threadList = newthreadList
 
 class PollingThread(threading.Thread):
-    def __init__(self, interval, threshold, clusterId, node):
+    def __init__(self, interval, threshold, clusterId, node, port):
         threading.Thread.__init__(self)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.threshold = int(threshold)
@@ -41,7 +44,7 @@ class PollingThread(threading.Thread):
         self.clusterId = clusterId
         self.node = node
         self.count = 0
-        
+        self.port = port
         from Recovery import Recovery
         self.recovery = Recovery()
         
@@ -50,27 +53,34 @@ class PollingThread(threading.Thread):
             while self.count < self.threshold :
                 try:
                     print "sock connect"
-                    sock.connect((host, port))
+                    self.sock.connect((self.node, self.port))
+                    break
                 except:
                     print "sock fail"
                     self.count = self.count + 1
                     time.sleep(self.interval)
 
             while self.count < self.threshold :
-                line = "polling request\n"
-                sock.sendall(line)
-                data, addr = sock.recvfrom(1024)
-                if data != "ACK\n" :
+                try:
+                    line = "polling request"
+                    self.sock.sendall(line)
+                    print "send request"
+                    data, addr = self.sock.recvfrom(1024)
+                    if data != "ACK" :
+                        self.count = self.count + 1
+                        print "no ACK"
+                        time.sleep(self.interval)
+                    if not data:
+                        self.count = self.count + 1
+                        print "no data"
+                        time.sleep(self.interval)
+                    else:
+                        print "Receive:"+data
+                        break
+                except:
+                    print "sock fail"
                     self.count = self.count + 1
-                    print "no ACK"
                     time.sleep(self.interval)
-                if not data:
-                    self.count = self.count + 1
-                    print "no data"
-                    time.sleep(self.interval)
-                else:
-                    break
-                    
             if self.count >= self.threshold :
                 config = ConfigParser.RawConfigParser()
                 config.read('hass.conf')

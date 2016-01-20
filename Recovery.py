@@ -106,14 +106,45 @@ class Recovery (object):
             return result
             
     def addInstance(self, clusterId, instanceId):
+        code = ""
+        message = ""
         if self.novaClient.volumes.get_server_volumes(instanceId) == [] :
             logging.info("Recovery Recovery - The instance can not be protected. (No volume)")
-            return "1;The instance can not be protected. (No volume)"
-        #else :
+            code = 1
+            message = "The instance can not be protected. (No volume)"
+        else:
+            vm = self.novaClient.servers.get(instanceId)
+            host = getattr(vm,"OS-EXT-SRV-ATTR:host")
+            if host in Recovery.clusterList[clusterId].nodeList :
+                Recovery.clusterList[clusterId].addInstance(instanceId, host)
+            else:
+                from Schedule import Schedule
+                
+                target_host = Schedule.default(Recovery.clusterList[clusterId].nodeList)
+                vm.live_migrate(host = target_host)
+                
     def recoveryNode(self, clusterId, nodeName):
         print clusterId
         print nodeName
+        
+        Recovery.clusterList[clusterId].deleteNode(nodeName)
+        for instance in Recovery.clusterList[clusterId].instanceList
+            instanceId, belowNode = instance
+            if belowNode == nodeName:
+                try:
+                    self.evacuate(instanceId, Recovery.clusterList[clusterId].nodeList)
+                    logging.info("Recovery Recovery - The instance %s evacuate success" % instanceId)
+                except:
+                    logging.error("Recovery Recovery - The instance %s evacuate failed" % instanceId)
     
+    def _evacuate(self, instanceId, nodeList):
+        from Schedule import Schedule
+        instance = self.novaClient.servers.get(instanceId)
+        target_host = Schedule.default(nodeList)
+        try:
+            instance.evacuate(host = target_host)
+        except:
+            raise
     
 class Cluster(object):
 
@@ -130,10 +161,13 @@ class Cluster(object):
         self.nodeList.extend(nodeList)
         
     def deleteNode(self, nodeName):
-        #self.detect.pollingCancel(self.id, nodeName)
+        self.detect.pollingCancel(self.id, nodeName)
         self.nodeList.remove(nodeName)
     
     def getNode(self):
         nodeStr = ','.join(self.nodeList)
         return nodeStr
+    
+    def addInstance(self, id, node):
+        self.instanceList.append((id, node))
      
