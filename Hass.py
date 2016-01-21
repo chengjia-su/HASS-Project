@@ -20,11 +20,11 @@ from Recovery import Recovery
 from Recovery import Cluster
 from AcessDB import AcessDB
 
-# Declare the configure file here. if you want to change configure file name, please modify scond line.
+# Declare the configure file here. if you want to change configure file name, please modify : hass.conf.
 config = ConfigParser.RawConfigParser()
 config.read('hass.conf')
 
-# Set log file here. if you want to change log format, please modify sixth line.
+# Set log file here. if you want to change log format, please modify : %(asctime)s [%(levelname)s] : %(message)s.
 log_level = logging.getLevelName(config.get("log", "level"))
 logFilename=config.get("log", "location")
 dir = os.path.dirname(logFilename)
@@ -147,14 +147,23 @@ class Hass (object):
         db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodename, db_uuid))
         return result["code"]+";"+result["message"]
         
+    def addInstance(self, clusterId, instanceId):
+        result = recovery.addInstance(clusterId)
+        return result["code"]+";"+result["message"]
+    
+    def deleteInstance(self, clusterId, instanceId):
+        result = recovery.deleteInstance(clusterId)
+        return result["code"]+";"+result["message"]
+    
     def listNode(self, clusterId) :
         result = recovery.listNode(clusterId)
         if result["code"]== "0":
             return result["code"]+";"+result["nodeList"]
         else:
             return result["code"]+";"+result["message"]
-    
-    #def addInstance(self, clusterId, instanceId)
+            
+    def recoveryNode(self, clusterId, nodeName):
+        recovery.recoveryNode(clusterId, nodeName)
         
 
     

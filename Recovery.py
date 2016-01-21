@@ -108,21 +108,57 @@ class Recovery (object):
     def addInstance(self, clusterId, instanceId):
         code = ""
         message = ""
-        if self.novaClient.volumes.get_server_volumes(instanceId) == [] :
-            logging.info("Recovery Recovery - The instance can not be protected. (No volume)")
-            code = 1
-            message = "The instance can not be protected. (No volume)"
+        if [instance for instance in Recovery.clusterList[clusterId].instanceList if instance[0]==id] != [] :
+            logging.info("Recovery Recovery - The instance %s already be protected." % instanceId)
+            code = "1"
+            message = "The instance %s already be protected." % instanceId
+        elif self.novaClient.volumes.get_server_volumes(instanceId) == [] :
+            logging.info("Recovery Recovery - The instance %s can not be protected. (No volume)" % instanceId)
+            code = "1"
+            message = "The instance %s can not be protected. (No volume)" % instanceId
         else:
             vm = self.novaClient.servers.get(instanceId)
             host = getattr(vm,"OS-EXT-SRV-ATTR:host")
             if host in Recovery.clusterList[clusterId].nodeList :
                 Recovery.clusterList[clusterId].addInstance(instanceId, host)
+                code = "0"
+                message = "The instance %s is protected." % instanceId
             else:
                 from Schedule import Schedule
-                
-                target_host = Schedule.default(Recovery.clusterList[clusterId].nodeList)
-                vm.live_migrate(host = target_host)
-                
+                try:
+                    target_host = Schedule.default(Recovery.clusterList[clusterId].nodeList)
+                    vm.live_migrate(host = target_host)
+                    Recovery.clusterList[clusterId].addInstance(instanceId, host)
+                    code = "0"
+                    message = "The instance %s is migrated to host:%s and protected." % (instanceId, target_host)
+                except:
+                    code = "1"
+                    message = "The instance %s can not be protected. (Migrate to HA cluster failed)" % instanceId
+        result = {"code": code, "clusterId":clusterId, "message":message}
+        return result
+        
+    def deleteInstance(self, clusterId, instanceId):
+        code = ""
+        message = ""
+        try:
+            instance = [instance for instance in Recovery.clusterList[clusterId].instanceList if instance[0]==id]
+        except:
+            logging.info("Recovery Recovery - Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId)
+            code = "1"
+            message = "Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId
+        if instance==[] :
+            logging.info("Recovery Recovery - The instance %s is not found." % instanceId)
+            code = "1"
+            message = "The instance %s is not found." % instanceId
+        else :
+            Recovery.clusterList[clusterId].deleteNode(instance[0])
+            logging.info("Recovery Recovery - The instance %s is not protected." % instanceId)
+            code = "0"
+            message = "The node %s is deleted from cluster." % nodeName
+        
+        result = {"code": code, "clusterId":clusterId, "message":message}
+        return result
+        
     def recoveryNode(self, clusterId, nodeName):
         print clusterId
         print nodeName
@@ -170,4 +206,7 @@ class Cluster(object):
     
     def addInstance(self, id, node):
         self.instanceList.append((id, node))
-     
+        
+    def deleteInstance(self, instance):
+        self.instanceList.remove(instance)
+        
