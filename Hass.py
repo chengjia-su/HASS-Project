@@ -94,10 +94,13 @@ class Hass (object):
 #   The SimpleRPCServer class
 #   Declare method here, and client can call it directly. 
 
-    def createCluster(self, name, nodeList):
+    def createCluster(self, name, nodeList=[]):
         createCluster_result = recovery.createCluster(name)
         if createCluster_result["code"] == "0":
-            addNode_result = recovery.addNode(createCluster_result["clusterId"], nodeList)
+            if nodeList != []:
+                addNode_result = recovery.addNode(createCluster_result["clusterId"], nodeList)
+            else :
+                addNode_result = {"code":1, "clusterId":createCluster_result["clusterId"], "message":"not add any node."}
             try:
                 db_uuid = createCluster_result["clusterId"].replace("-","")
                 data = {"cluster_uuid":db_uuid, "cluster_name":name}

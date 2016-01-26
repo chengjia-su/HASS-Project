@@ -42,7 +42,10 @@ def main():
     args = parser.parse_args()
     
     if args.command == "cluster-create" :
-        result = server.createCluster(args.name, args.nodes.strip().split(",")).split(";")
+        if args.nodes != None:
+            result = server.createCluster(args.name, args.nodes.strip().split(",")).split(";")
+        else:
+            result = server.createCluster(args.name, []).split(";")
         print showResult(result)
     
     elif args.command == "cluster-delete" :
