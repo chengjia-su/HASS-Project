@@ -150,18 +150,25 @@ class Hass (object):
         db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodename, db_uuid))
         return result["code"]+";"+result["message"]
         
-    def addInstance(self, clusterId, instanceId):
-        result = recovery.addInstance(clusterId)
-        return result["code"]+";"+result["message"]
-    
-    def deleteInstance(self, clusterId, instanceId):
-        result = recovery.deleteInstance(clusterId)
-        return result["code"]+";"+result["message"]
-    
     def listNode(self, clusterId) :
         result = recovery.listNode(clusterId)
         if result["code"]== "0":
             return result["code"]+";"+result["nodeList"]
+        else:
+            return result["code"]+";"+result["message"]
+            
+    def addInstance(self, clusterId, instanceId):
+        result = recovery.addInstance(clusterId, instanceId)
+        return result["code"]+";"+result["message"]
+    
+    def deleteInstance(self, clusterId, instanceId):
+        result = recovery.deleteInstance(clusterId, instanceId)
+        return result["code"]+";"+result["message"]
+    
+    def listInstance(self, clusterId) :
+        result = recovery.listInstance(clusterId)
+        if result["code"]== "0":
+            return result["code"]+";"+result["instanceList"]
         else:
             return result["code"]+";"+result["message"]
             

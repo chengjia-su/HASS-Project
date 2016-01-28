@@ -26,9 +26,9 @@ class DetectionManager():
     def pollingCancel(self, id, node):
         newthreadList = []
         for nodeInfo in self.threadList:
-            if nodeInfo["id"] == id and nodeInfo["node"]== node :
+            if nodeInfo["id"] == id and nodeInfo["node"]==node :                
                 try:
-                    nodeInfo["thread"].exit()
+                    nodeInfo["thread"].stop()
                 except:
                     pass
             else :
@@ -48,8 +48,10 @@ class PollingThread(threading.Thread):
         from Recovery import Recovery
         self.recovery = Recovery()
         
+        self.exit = True
+        
     def run(self):
-        while True:
+        while self.exit:
             while self.count < self.threshold :
                 try:
                     print "sock connect"
@@ -92,16 +94,17 @@ class PollingThread(threading.Thread):
                 self.count = 0
                 time.sleep(self.interval)
                 
+    def stop(self):
+        self.exit = False
             
 def main():
-    
     test = DetectionManager()
-    test.pollingRegister("test", "compute1")
-    try:
-        while True:
-         pass
-    except:
-        sys.exit(1)
+    while True:
+        ch = raw_input("=>")
+        if ch == "s":
+            test.pollingRegister("test", "compute1")
+        elif ch == "k":
+            test.pollingCancel("test", "compute1")
     
 if __name__ == "__main__":
     main()

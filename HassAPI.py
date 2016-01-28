@@ -39,6 +39,17 @@ def main():
     parser_node_list = subparsers.add_parser('node-list', help='List all computing nodes of Ha cluster')
     parser_node_list.add_argument("-i", "--uuid", help="HA cluster uuid", required=True)
     
+    parser_instance_add = subparsers.add_parser('instance-add', help='Protect instance and add instance into HA cluster')
+    parser_instance_add.add_argument("-i", "--uuid", help="HA cluster uuid", required=True)
+    parser_instance_add.add_argument("-v", "--vmid", help="The ID of the instance you wand to protect", required=True)
+    
+    parser_instance_delete = subparsers.add_parser('instance-delete', help='remove instance protection')
+    parser_instance_delete.add_argument("-i", "--uuid", help="HA cluster uuid", required=True)
+    parser_instance_delete.add_argument("-v", "--vmid", help="The ID of the instance you wand to remove protection", required=True)
+    
+    parser_instance_list = subparsers.add_parser('instance-list', help='List all instances of Ha cluster')
+    parser_instance_list.add_argument("-i", "--uuid", help="HA cluster uuid", required=True)
+    
     args = parser.parse_args()
     
     if args.command == "cluster-create" :
@@ -77,6 +88,29 @@ def main():
                 counter = counter + 1
                 if node != '':
                     table.add_row([str(counter),node])
+            print table
+        else :
+            print result
+            
+    elif args.command == "instance-add" :
+        result = server.addInstance(args.uuid, args.vmid).split(";")
+        print showResult(result)
+        
+    elif args.command == "instance-delete" :
+        result = server.deleteInstance(args.uuid, args.vmid).split(";")
+        print showResult(result)
+        
+    elif args.command == "instance-list" :
+        result = server.listInstance(args.uuid)
+        if result.split(";")[0] == '0' :
+            print "Cluster uuid : " + args.uuid
+            table = PrettyTable(["Count","Below Host", "Instance ID"])
+            counter = 0
+            for vmInfo in result.split(";")[1].split(",") :
+                counter = counter + 1
+                if vmInfo != '':
+                    vm = vmInfo.split(":")
+                    table.add_row([str(counter), vm[0], vm[1]])
             print table
         else :
             print result

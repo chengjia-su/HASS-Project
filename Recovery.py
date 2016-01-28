@@ -108,10 +108,10 @@ class Recovery (object):
     def addInstance(self, clusterId, instanceId):
         code = ""
         message = ""
-        if [instance for instance in Recovery.clusterList[clusterId].instanceList if instance[0]==id] != [] :
-            logging.info("Recovery Recovery - The instance %s already be protected." % instanceId)
+        if [instance for instance in Recovery.clusterList[clusterId].instanceList if instance[0]==instanceId] != [] :
+            logging.info("Recovery Recovery - The instance %s is already protected." % instanceId)
             code = "1"
-            message = "The instance %s already be protected." % instanceId
+            message = "The instance %s is already protected." % instanceId
         elif self.novaClient.volumes.get_server_volumes(instanceId) == [] :
             logging.info("Recovery Recovery - The instance %s can not be protected. (No volume)" % instanceId)
             code = "1"
@@ -159,24 +159,40 @@ class Recovery (object):
         result = {"code": code, "clusterId":clusterId, "message":message}
         return result
         
+    def listInstance(self, clusterId):
+        code = ""
+        message = ""
+        try:
+            instanceList = Recovery.clusterList[clusterId].getInstance()
+            code = "0"
+            message = "Success"
+        except:
+            code = "1"
+            message = "The cluster is not found. (uuid = %s)" % clusterId
+        finally:
+            result = {"code": code, "instanceList":instanceList, "message":message}
+            return result
+            
     def recoveryNode(self, clusterId, nodeName):
         print clusterId
         print nodeName
         
         Recovery.clusterList[clusterId].deleteNode(nodeName)
-        for instance in Recovery.clusterList[clusterId].instanceList
+        for instance in Recovery.clusterList[clusterId].instanceList:
             instanceId, belowNode = instance
             if belowNode == nodeName:
                 try:
-                    self.evacuate(instanceId, Recovery.clusterList[clusterId].nodeList)
+                    self._evacuate(instanceId, Recovery.clusterList[clusterId].nodeList)
                     logging.info("Recovery Recovery - The instance %s evacuate success" % instanceId)
-                except:
+                except Exception as e:
+                    print e
                     logging.error("Recovery Recovery - The instance %s evacuate failed" % instanceId)
     
     def _evacuate(self, instanceId, nodeList):
         from Schedule import Schedule
+        schedule = Schedule()
         instance = self.novaClient.servers.get(instanceId)
-        target_host = Schedule.default(nodeList)
+        target_host = schedule.default(nodeList)
         try:
             instance.evacuate(host = target_host)
         except:
@@ -209,4 +225,8 @@ class Cluster(object):
         
     def deleteInstance(self, instance):
         self.instanceList.remove(instance)
+        
+    def getInstance(self):
+        instanceStr = ",".join("%s:%s" % tup for tup in self.instanceList)
+        return instanceStr
         
