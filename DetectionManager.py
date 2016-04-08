@@ -68,11 +68,13 @@ class PollingThread(threading.Thread):
                     self.sock.sendall(line)
                     print "send request"
                     data, addr = self.sock.recvfrom(1024)
-                    if data != "ACK" :
+                    if dara == "OK":
+                        self.count = 0
+                    elif "error" in data :
                         self.count = self.count + 1
                         print "no ACK"
                         time.sleep(self.interval)
-                    if not data:
+                    elif not data:
                         self.count = self.count + 1
                         print "no data"
                         time.sleep(self.interval)
@@ -83,6 +85,15 @@ class PollingThread(threading.Thread):
                     print "sock fail"
                     self.count = self.count + 1
                     time.sleep(self.interval)
+                    
+            if ("error" in data) and (self.count >= self.threshold):
+                time.sleep(self.interval*10)
+                line = "polling request"
+                self.sock.sendall(line)
+                data, addr = self.sock.recvfrom(1024)
+                    if dara == "OK":
+                        self.count = 0
+                
             if self.count >= self.threshold :
                 config = ConfigParser.RawConfigParser()
                 config.read('hass.conf')

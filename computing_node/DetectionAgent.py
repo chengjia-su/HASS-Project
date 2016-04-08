@@ -22,13 +22,40 @@ class PollingHandler(asyncore.dispatcher):
         self.create_socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.set_reuse_addr()
         self.bind((host, port))
+        libvirt_uri = "qemu:///system"
         
     def handle_read(self):
         data, addr = self.recvfrom(2048)
         print 'request from: ', addr
+        check_result = self.check_result()
         if data == "polling request":
-            self.sendto("ACK", addr)
-            
+            if check_result == "":
+                self.sendto("OK", addr)
+            else:
+                check_result = "error:" + check_result
+                self.sendto(check_result, addr)
+    
+    def check_services(self):
+        import libvirt
+        import subprocess
+        message = ""
+        #check libvirt
+        conn = libvirt.open(libvirt_uri)
+        if conn == None:
+            message = "libvirt;"
+        conn.close()
+        #check nova-compute
+        output = subprocess.check_output(['ps', '-A'])
+        if "nova-compute" not in output:
+            message += "nova;"
+        #check qemu-kvm    
+        output = subprocess.check_output(['service', 'qemu-kvm', 'status'])
+        if "start/running" not in output:
+            message += "qemukvm;"
+        
+        return message
+        
+        
 def main():
     
     test = DetectionAgent()

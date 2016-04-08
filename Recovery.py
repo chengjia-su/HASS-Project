@@ -7,24 +7,26 @@ from DetectionManager import DetectionManager
 
 class Recovery (object):
 
-    clusterList = {}
-
-    def __init__ (self):
+    def __init__ (self, test=False, hostList = []):
+        self.clusterList = {}
         self.config = ConfigParser.RawConfigParser()
         self.config.read('hass.conf')
-        
-        self.novaClient = client.Client(2, self.config.get("openstack", "openstack_admin_account"), self.config.get("openstack", "openstack_admin_password"), self.config.get("openstack", "openstack_admin_account"), "http://controller:5000/v2.0")
-        hypervisorList = self.novaClient.hypervisors.list()
-        self.hostList = []
-        for hypervisor in hypervisorList:
-            self.hostList.append(str(hypervisor.hypervisor_hostname))
+        self.test = test
+        if self.test==False:
+            self.novaClient = client.Client(2, self.config.get("openstack", "openstack_admin_account"), self.config.get("openstack", "openstack_admin_password"), self.config.get("openstack", "openstack_admin_account"), "http://controller:5000/v2.0")
+            hypervisorList = self.novaClient.hypervisors.list()        
+            self.hostList = []
+            for hypervisor in hypervisorList:
+                self.hostList.append(str(hypervisor.hypervisor_hostname))
+        else:
+            self.hostList = hostList
         
         
     def createCluster(self, clusterName):
         import uuid
         newClusterUuid = str(uuid.uuid4())
         newCluster = Cluster(uuid = newClusterUuid, name = clusterName)
-        Recovery.clusterList[newClusterUuid] = newCluster
+        self.clusterList[newClusterUuid] = newCluster
         result = {"code": "0", "clusterId":newClusterUuid, "message":""}
         return result
             
@@ -32,7 +34,7 @@ class Recovery (object):
         code = ""
         message = ""
         try:
-            del Recovery.clusterList[uuid]
+            del self.clusterList[uuid]
             logging.info("Recovery Recovery - The cluster %s is deleted." % uuid)
             code = "0"
             message = "The cluster %s is deleted." % uuid
@@ -46,7 +48,7 @@ class Recovery (object):
         
     def listCluster(self):
         result = []
-        for uuid, cluster in Recovery.clusterList.iteritems() :
+        for uuid, cluster in self.clusterList.iteritems() :
             result.append((uuid, cluster.name))
         return result
         
@@ -56,7 +58,7 @@ class Recovery (object):
         notMatchNode = [nodeName for nodeName in nodeList if nodeName not in self.hostList]
         if not notMatchNode:
             try:
-                Recovery.clusterList[clusterId].addNode(nodeList)
+                self.clusterList[clusterId].addNode(nodeList, test = self.test)
                 logging.info("Recovery Recovery - The node %s is added to cluster." % ', '.join(str(node) for node in nodeList))
                 self.hostList = [nodeName for nodeName in self.hostList if nodeName not in nodeList]
                 code = "0"
@@ -78,11 +80,17 @@ class Recovery (object):
     def deleteNode(self, clusterId, nodeName):
         code = ""
         message = ""
+        
         try:
-            Recovery.clusterList[clusterId].deleteNode(nodeName)
-            logging.info("Recovery Recovery - The node %s is deleted from cluster." % nodeName)
-            code = "0"
-            message = "The node %s is deleted from cluster." % nodeName
+            if nodeName not in self.clusterList[clusterId].nodeList:
+                logging.info("Recovery Recovery - Delete node from cluster failed. The node is not found. (uuid = %s)" % nodeName)
+                code = "1"
+                message = "Delete node from cluster failed. The node is not found. (uuid = %s)" % nodeName
+            else :
+                self.clusterList[clusterId].deleteNode(nodeName, test = self.test)
+                logging.info("Recovery Recovery - The node %s is deleted from cluster." % nodeName)
+                code = "0"
+                message = "The node %s is deleted from cluster." % nodeName
         except:
             logging.info("Recovery Recovery - Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId)
             code = "1"
@@ -95,10 +103,11 @@ class Recovery (object):
         code = ""
         message = ""
         try:
-            nodeList = Recovery.clusterList[clusterId].getNode()
+            nodeList = self.clusterList[clusterId].getNode()
             code = "0"
             message = "Success"
         except:
+            nodeList = ""
             code = "1"
             message = "The cluster is not found. (uuid = %s)" % clusterId
         finally:
@@ -108,7 +117,7 @@ class Recovery (object):
     def addInstance(self, clusterId, instanceId):
         code = ""
         message = ""
-        if [instance for instance in Recovery.clusterList[clusterId].instanceList if instance[0]==instanceId] != [] :
+        if [instance for instance in self.clusterList[clusterId].instanceList if instance[0]==instanceId] != [] :
             logging.info("Recovery Recovery - The instance %s is already protected." % instanceId)
             code = "1"
             message = "The instance %s is already protected." % instanceId
@@ -119,16 +128,16 @@ class Recovery (object):
         else:
             vm = self.novaClient.servers.get(instanceId)
             host = getattr(vm,"OS-EXT-SRV-ATTR:host")
-            if host in Recovery.clusterList[clusterId].nodeList :
-                Recovery.clusterList[clusterId].addInstance(instanceId, host)
+            if host in self.clusterList[clusterId].nodeList :
+                self.clusterList[clusterId].addInstance(instanceId, host)
                 code = "0"
                 message = "The instance %s is protected." % instanceId
             else:
                 from Schedule import Schedule
                 try:
-                    target_host = Schedule.default(Recovery.clusterList[clusterId].nodeList)
+                    target_host = Schedule.default(self.clusterList[clusterId].nodeList)
                     vm.live_migrate(host = target_host)
-                    Recovery.clusterList[clusterId].addInstance(instanceId, host)
+                    self.clusterList[clusterId].addInstance(instanceId, host)
                     code = "0"
                     message = "The instance %s is migrated to host:%s and protected." % (instanceId, target_host)
                 except:
@@ -141,7 +150,7 @@ class Recovery (object):
         code = ""
         message = ""
         try:
-            instance = [instance for instance in Recovery.clusterList[clusterId].instanceList if instance[0]==id]
+            instance = [instance for instance in self.clusterList[clusterId].instanceList if instance[0]==id]
         except:
             logging.info("Recovery Recovery - Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId)
             code = "1"
@@ -151,7 +160,7 @@ class Recovery (object):
             code = "1"
             message = "The instance %s is not found." % instanceId
         else :
-            Recovery.clusterList[clusterId].deleteNode(instance[0])
+            self.clusterList[clusterId].deleteNode(instance[0])
             logging.info("Recovery Recovery - The instance %s is not protected." % instanceId)
             code = "0"
             message = "The node %s is deleted from cluster." % nodeName
@@ -163,7 +172,7 @@ class Recovery (object):
         code = ""
         message = ""
         try:
-            instanceList = Recovery.clusterList[clusterId].getInstance()
+            instanceList = self.clusterList[clusterId].getInstance()
             code = "0"
             message = "Success"
         except:
@@ -176,13 +185,13 @@ class Recovery (object):
     def recoveryNode(self, clusterId, nodeName):
         print clusterId
         print nodeName
-        
-        Recovery.clusterList[clusterId].deleteNode(nodeName)
-        for instance in Recovery.clusterList[clusterId].instanceList:
+
+        for instance in self.clusterList[clusterId].instanceList:
             instanceId, belowNode = instance
             if belowNode == nodeName:
                 try:
-                    self._evacuate(instanceId, Recovery.clusterList[clusterId].nodeList)
+                    self._evacuate(instanceId, self.clusterList[clusterId].nodeList)
+                    self.clusterList[clusterId].deleteNode(nodeName)
                     logging.info("Recovery Recovery - The instance %s evacuate success" % instanceId)
                 except Exception as e:
                     print e
@@ -207,13 +216,15 @@ class Cluster(object):
         self.instanceList = []
         self.detect = DetectionManager()
         
-    def addNode(self, nodeList):
-        for node in nodeList :
-            self.detect.pollingRegister(self.id, node)
+    def addNode(self, nodeList, test):
+        if test == False:
+            for node in nodeList :
+                self.detect.pollingRegister(self.id, node)
         self.nodeList.extend(nodeList)
         
-    def deleteNode(self, nodeName):
-        self.detect.pollingCancel(self.id, nodeName)
+    def deleteNode(self, nodeName, test):
+        if test == False:
+            self.detect.pollingCancel(self.id, nodeName)
         self.nodeList.remove(nodeName)
     
     def getNode(self):
