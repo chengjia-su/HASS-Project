@@ -63,6 +63,7 @@ class Recovery (object):
                 self.hostList = [nodeName for nodeName in self.hostList if nodeName not in nodeList]
                 code = "0"
                 message = "The node %s is added to cluster." % ', '.join(str(node) for node in nodeList)
+            
             except:
                 logging.info("Recovery Recovery - The cluster is not found (uuid = %s)." % clusterId)
                 code = "1"
@@ -70,6 +71,7 @@ class Recovery (object):
             finally:
                 result = {"code":code, "clusterId":clusterId, "message":message}
                 return result
+                
         else:
             logging.info("Recovery Recovery - The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode))
             message = "The node is not found (name = %s)." % ', '.join(str(node) for node in notMatchNode)
@@ -191,12 +193,13 @@ class Recovery (object):
             if belowNode == nodeName:
                 try:
                     self._evacuate(instanceId, self.clusterList[clusterId].nodeList)
-                    self.clusterList[clusterId].deleteNode(nodeName)
                     logging.info("Recovery Recovery - The instance %s evacuate success" % instanceId)
+ 
                 except Exception as e:
                     print e
                     logging.error("Recovery Recovery - The instance %s evacuate failed" % instanceId)
-    
+        self.clusterList[clusterId].deleteNode(nodeName)
+        
     def _evacuate(self, instanceId, nodeList):
         from Schedule import Schedule
         schedule = Schedule()
@@ -216,13 +219,13 @@ class Cluster(object):
         self.instanceList = []
         self.detect = DetectionManager()
         
-    def addNode(self, nodeList, test):
+    def addNode(self, nodeList, test=False):
         if test == False:
             for node in nodeList :
                 self.detect.pollingRegister(self.id, node)
         self.nodeList.extend(nodeList)
         
-    def deleteNode(self, nodeName, test):
+    def deleteNode(self, nodeName, test=False):
         if test == False:
             self.detect.pollingCancel(self.id, nodeName)
         self.nodeList.remove(nodeName)

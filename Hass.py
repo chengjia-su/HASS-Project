@@ -18,7 +18,7 @@ import sys
 
 from Recovery import Recovery
 from Recovery import Cluster
-from AcessDB import AcessDB
+from AccessDB import AccessDB
 
 # Declare the configure file here. if you want to change configure file name, please modify : hass.conf.
 config = ConfigParser.RawConfigParser()
@@ -36,7 +36,7 @@ logging.basicConfig(filename=logFilename,level=log_level, format="%(asctime)s [%
 recovery = Recovery()
 
 # Declare database access class. When it initialize, connecting database and creating table. You need to ensure new it just one times.
-db = AcessDB()
+db = AccessDB()
 
 class RequestHandler(SimpleXMLRPCRequestHandler):
 #   Handle RPC request from remote user, and suport access authenticate. 
@@ -93,7 +93,9 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
 class Hass (object):
 #   The SimpleRPCServer class
 #   Declare method here, and client can call it directly. 
-
+    def test_auth_response(self):
+        return "auth success"
+        
     def createCluster(self, name, nodeList=[], test=False):
         createCluster_result = recovery.createCluster(name)
         if createCluster_result["code"] == "0":
@@ -134,10 +136,11 @@ class Hass (object):
     def deleteCluster(self, uuid, test=False):
         result = recovery.deleteCluster(uuid)
         
-        if test==False:
-        #Unit test should not access database
-            db_uuid = uuid.replace("-","")
-            db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = %s", db_uuid)
+        if result["code"] == 0:
+            if test==False:
+            #Unit test should not access database
+                db_uuid = uuid.replace("-","")
+                db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = %s", db_uuid)
             
         return result["code"]+";"+result["message"]
     
@@ -194,7 +197,10 @@ class Hass (object):
             return result["code"]+";"+result["message"]
             
     def recoveryNode(self, clusterId, nodeName):
-        recovery.recoveryNode(clusterId, nodeName)
+        result = recovery.recoveryNode(clusterId, nodeName)
+        db_uuid = clusterId.replace("-", "")
+        db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodeName, db_uuid))
+        
         
 
     
@@ -205,10 +211,19 @@ def main():
     server.register_multicall_functions()
     server.register_instance(Hass(), allow_dotted_names=True)
     try:
-        db.readDB()
+        db.createTable()
     except:
         print "Access Database Failed"
-    
+        sys.exit(1)
+        db.closeDB()
+        
+    try:    
+        db.readDB(recovery)
+    except:
+        print "System initialize Failed"
+        sys.exit(1)
+        db.closeDB()
+
     print "Server ready"
     try:
         server.serve_forever()

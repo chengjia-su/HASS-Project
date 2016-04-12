@@ -7,10 +7,9 @@ import MySQLdb, MySQLdb.cursors
 config = ConfigParser.RawConfigParser()
 config.read('hass.conf')
 
-class AcessDB(object):
+class AccessDB(object):
 
     def __init__ (self):
-
         try:
             self.dbconn = MySQLdb.connect(  host = config.get("mysql", "mysql_ip"),
                                         user = config.get("mysql", "mysql_username"),
@@ -23,6 +22,8 @@ class AcessDB(object):
             sys.exit(1)
 
         self.db = self.dbconn.cursor(cursorclass = MySQLdb.cursors.DictCursor)
+            
+    def createTable(self):
         try:
             self.db.execute("SET sql_notes = 0;")
             self.db.execute("""
@@ -49,7 +50,7 @@ class AcessDB(object):
             logging.error("Hass AccessDB - Read data failed (MySQL Error: %s)", str(e))
             print "MySQL Error: %s" % str(e)
             
-    def readDB(self):
+    def readDB(self, recovery):
         self.db.execute("SELECT * FROM ha_cluster;")
         ha_cluster_date = self.db.fetchall()
         for cluster in ha_cluster_date:
@@ -58,7 +59,6 @@ class AcessDB(object):
             ha_node_date = self.db.fetchall()
             for node in ha_node_date:
                 nodeList.append(node["node_name"])
-            recovery = Recovery()
             uuid = cluster["cluster_uuid"][:8]+"-"+cluster["cluster_uuid"][8:12]+"-"+cluster["cluster_uuid"][12:16]+"-"+cluster["cluster_uuid"][16:20]+"-"+cluster["cluster_uuid"][20:]
             newCluster = Cluster(uuid = uuid, name = cluster["cluster_name"])
             recovery.clusterList[uuid] = newCluster

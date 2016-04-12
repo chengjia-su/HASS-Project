@@ -1,14 +1,20 @@
 from collections import Counter
 from prettytable import PrettyTable
 from datetime import datetime
+import xmlrpclib
 
 from Recovery import Recovery
 from Recovery import Cluster
 
-ndigits = 5
+
+environment_node = ["testNode1", "testNode2", "testNode3", "testNode4"]
+listen_port = str(61209)
 
 #----------------------------Test Data-------------------------
-environment_node = ["testNode1", "testNode2", "testNode3", "testNode4"]
+correct_auth = "http://user:pdclab@127.0.0.1:"+listen_port
+no_auth = "http://127.0.0.1:"+listen_port
+wrong_auth = "http://auth:fail@127.0.0.1:"+listen_port
+
 cluster_name = "testCluster"
 
 correct_nodeList = ["testNode1", "testNode4"]
@@ -32,7 +38,72 @@ class ShowResult():
         print case+"("+str(time.microseconds)+"ms) : "+self.OK
     def error(self, case):
         print case+"(execution time:"+str(time.microseconds)+"ms) : "+self.ERROR
+        
+        
+class TestClientAuth():
 
+    def __init__(self):
+        self.printer = ShowResult()
+        self.clientUrl = "127.0.0.1:"+listen_port
+        self.case_counter = 0
+        self.pass_case = 0
+        self.fail_case = 0
+        
+    def test_correctAuth(self):
+        case = "Authenticate client with correct username and password"
+        self.case_counter += 1
+        start_time = datetime.now()
+        server = xmlrpclib.ServerProxy(correct_auth)
+        try:
+            resp = server.test_auth_response()
+            exec_time = datetime.now() - start_time
+            if resp == "auth success" :
+                self.pass_case += 1
+                self.printer.ok(case, exec_time)
+            else :
+                self.fail_case += 1
+                self.printer.error(case, exec_time)
+                
+        except xmlrpclib.ProtocolError:
+            exec_time = datetime.now() - start_time
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+            
+    def test_wrongAuth(self):
+        case = "Authenticate client with wrong username and password"
+        self.case_counter += 1
+        start_time = datetime.now()
+        server = xmlrpclib.ServerProxy(wrong_auth)
+        
+        try:
+            server.test_auth_response()
+            exec_time = datetime.now() - start_time
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+        except xmlrpclib.ProtocolError:
+            exec_time = datetime.now() - start_time
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+            
+    def test_withoutAuth(self):
+        case = "Authenticate client without username and password"
+        self.case_counter += 1
+        start_time = datetime.now()
+        server = xmlrpclib.ServerProxy(no_auth)
+
+        try:
+            server.test_auth_response()
+            exec_time = datetime.now() - start_time
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+        except xmlrpclib.ProtocolError:
+            exec_time = datetime.now() - start_time
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+            
+            
+
+    
 class TestCluster():
 
     def __init__(self):
@@ -285,9 +356,15 @@ def main():
         result = 100 * float(part)/float(whole)
         return str(result)+"%"
     
-    cluster_tester = TestCluster()
     print "Test Start!"
     print "------------------------------------------------------------------------------------"
+    auth_tester = TestClientAuth()
+    print "[HAaaS-TC-01]"
+    auth_tester.test_correctAuth()
+    auth_tester.test_wrongAuth()
+    auth_tester.test_withoutAuth()
+    print "------------------------------------------------------------------------------------"
+    cluster_tester = TestCluster()
     print "[HAaaS-TC-02]"
     cluster_tester.test_create()
     print "------------------------------------------------------------------------------------"
@@ -318,9 +395,9 @@ def main():
     print "------------------------------------------------------------------------------------"
     print "Test Finish!"
 
-    total_case = cluster_tester.case_counter + node_tester.case_counter
-    pass_case = cluster_tester.pass_case + node_tester.pass_case
-    fail_case = cluster_tester.fail_case + node_tester.fail_case
+    total_case = auth_tester.case_counter + cluster_tester.case_counter + node_tester.case_counter
+    pass_case = auth_tester.pass_case + cluster_tester.pass_case + node_tester.pass_case
+    fail_case = auth_tester.fail_case + cluster_tester.fail_case + node_tester.fail_case
     
     reportTable = PrettyTable()
     reportTable.field_names = ["Total Case", "Pass Case", "Fail Case", "Pass Rate"]

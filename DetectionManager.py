@@ -45,12 +45,11 @@ class PollingThread(threading.Thread):
         self.node = node
         self.count = 0
         self.port = port
-        from Recovery import Recovery
-        self.recovery = Recovery()
         
         self.exit = True
         
     def run(self):
+        data = ""
         while self.exit:
             while self.count < self.threshold :
                 try:
@@ -91,14 +90,19 @@ class PollingThread(threading.Thread):
                 line = "polling request"
                 self.sock.sendall(line)
                 data, addr = self.sock.recvfrom(1024)
-                    if dara == "OK":
-                        self.count = 0
+                if data == "OK":
+                    self.count = 0
                 
             if self.count >= self.threshold :
                 config = ConfigParser.RawConfigParser()
                 config.read('hass.conf')
                 logging.error("DetectionManager PollingThread - The %s below cluster : %s is down" % (self.node, self.clusterId))
-                self.recovery.recoveryNode(self.clusterId, self.node)
+                
+                config = ConfigParser.RawConfigParser()
+                config.read('hass.conf')
+                authUrl = "http://"+config.get("rpc", "rpc_username")+":"+config.get("rpc", "rpc_password")+"@127.0.0.1:"+config.get("rpc", "rpc_bind_port")
+                server = xmlrpclib.ServerProxy(authUrl)
+                server.recoveryNode(self.clusterId, self.node)
                 break
                 
             else :
