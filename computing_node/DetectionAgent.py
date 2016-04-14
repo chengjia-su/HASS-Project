@@ -22,12 +22,12 @@ class PollingHandler(asyncore.dispatcher):
         self.create_socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.set_reuse_addr()
         self.bind((host, port))
-        libvirt_uri = "qemu:///system"
+        self.libvirt_uri = "qemu:///system"
         
     def handle_read(self):
         data, addr = self.recvfrom(2048)
         print 'request from: ', addr
-        check_result = self.check_result()
+        check_result = self.check_services()
         if data == "polling request":
             if check_result == "":
                 self.sendto("OK", addr)
@@ -40,7 +40,7 @@ class PollingHandler(asyncore.dispatcher):
         import subprocess
         message = ""
         #check libvirt
-        conn = libvirt.open(libvirt_uri)
+        conn = libvirt.open(self.libvirt_uri)
         if conn == None:
             message = "libvirt;"
         conn.close()

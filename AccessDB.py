@@ -1,6 +1,5 @@
 import logging
 import ConfigParser
-from Recovery import Recovery
 from Recovery import Cluster
 import MySQLdb, MySQLdb.cursors
 
@@ -62,7 +61,7 @@ class AccessDB(object):
             uuid = cluster["cluster_uuid"][:8]+"-"+cluster["cluster_uuid"][8:12]+"-"+cluster["cluster_uuid"][12:16]+"-"+cluster["cluster_uuid"][16:20]+"-"+cluster["cluster_uuid"][20:]
             newCluster = Cluster(uuid = uuid, name = cluster["cluster_name"])
             recovery.clusterList[uuid] = newCluster
-            recovery.addNode(uuid, nodeList)
+            recovery.addNode(uuid, nodeList, write_db=False)
             
     def writeDB(self, dbname, data):
         if dbname == "ha_cluster":

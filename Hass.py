@@ -18,7 +18,7 @@ import sys
 
 from Recovery import Recovery
 from Recovery import Cluster
-from AccessDB import AccessDB
+
 
 # Declare the configure file here. if you want to change configure file name, please modify : hass.conf.
 config = ConfigParser.RawConfigParser()
@@ -34,9 +34,6 @@ logging.basicConfig(filename=logFilename,level=log_level, format="%(asctime)s [%
 
 # Declare Recovery class. You need to ensure that there is only one object. So I declare it as global variable.
 recovery = Recovery()
-
-# Declare database access class. When it initialize, connecting database and creating table. You need to ensure new it just one times.
-db = AccessDB()
 
 class RequestHandler(SimpleXMLRPCRequestHandler):
 #   Handle RPC request from remote user, and suport access authenticate. 
@@ -102,46 +99,17 @@ class Hass (object):
             if nodeList != []:
                 addNode_result = recovery.addNode(createCluster_result["clusterId"], nodeList)
             else :
-                addNode_result = {"code":1, "clusterId":createCluster_result["clusterId"], "message":"not add any node."}
-            
-            if test==False:
-            #Unit test should not access database
-                try:
-                    db_uuid = createCluster_result["clusterId"].replace("-","")
-                    data = {"cluster_uuid":db_uuid, "cluster_name":name}
-                    db.writeDB("ha_cluster", data)
-                except:
-                    logging.error("Hass Hass - Access database failed.")
-                    return "1;Access database failed, please wait a minute and try again."
+                addNode_result = {"code":0, "clusterId":createCluster_result["clusterId"], "message":"not add any node."}
                     
             if addNode_result["code"] == "0":
-            
-                if test==False:
-                #Unit test should not access database
-                    try:
-                        for node in nodeList:
-                            data = {"node_name": node,"below_cluster":db_uuid}
-                            db.writeDB("ha_node", data)
-                        return "0;Create HA cluster and add computing node success, cluster uuid is %s" % createCluster_result["clusterId"]
-                    except:
-                        logging.error("Hass Hass - Access database failed.")
-                        return "1;Access database failed, please wait a minute and try again."
-                        
+                return "0;Create HA cluster and add computing node success, cluster uuid is %s" % createCluster_result["clusterId"]
             else:
                 return "0;The cluster is created.(uuid = "+createCluster_result["clusterId"]+") But,"+ addNode_result["message"]
-                
         else:
-            return createCluster_result["code"]+";"+createCluster_result["clusterId"]
+            return createCluster_result["code"]+";"+createCluster_result["message"]
 
     def deleteCluster(self, uuid, test=False):
         result = recovery.deleteCluster(uuid)
-        
-        if result["code"] == 0:
-            if test==False:
-            #Unit test should not access database
-                db_uuid = uuid.replace("-","")
-                db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = %s", db_uuid)
-            
         return result["code"]+";"+result["message"]
     
     def listCluster(self):
@@ -149,29 +117,11 @@ class Hass (object):
         return result
     
     def addNode(self, clusterId, nodeList, test=False):
-        result = recovery.addNode(clusterId, nodeList)
-        if result["code"] == "0":
-        
-            if test==False:
-            #Unit test should not access database
-                try:
-                    for node in nodeList:
-                        db_uuid = clusterId.replace("-", "")
-                        data = {"node_name": node,"below_cluster":db_uuid}
-                        db.writeDB("ha_node", data)
-                except:
-                    return "2;System failed, please wait a minute and try again.(DB Exception)"
-                    
+        result = recovery.addNode(clusterId, nodeList)               
         return result["code"]+";"+result["message"]
     
     def deleteNode(self, clusterId, nodename, test=False):
         result = recovery.deleteNode(clusterId, nodename)
-                
-        if test==False:
-        #Unit test should not access database
-            db_uuid = clusterId.replace("-", "")
-            db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodename, db_uuid))
-            
         return result["code"]+";"+result["message"]
         
     def listNode(self, clusterId) :
@@ -198,8 +148,6 @@ class Hass (object):
             
     def recoveryNode(self, clusterId, nodeName):
         result = recovery.recoveryNode(clusterId, nodeName)
-        db_uuid = clusterId.replace("-", "")
-        db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodeName, db_uuid))
         
         
 
@@ -210,27 +158,12 @@ def main():
     server.register_introspection_functions()
     server.register_multicall_functions()
     server.register_instance(Hass(), allow_dotted_names=True)
-    try:
-        db.createTable()
-    except:
-        print "Access Database Failed"
-        sys.exit(1)
-        db.closeDB()
-        
-    try:    
-        db.readDB(recovery)
-    except:
-        print "System initialize Failed"
-        sys.exit(1)
-        db.closeDB()
 
     print "Server ready"
     try:
         server.serve_forever()
     except:
         sys.exit(1)
-    finally:
-        db.closeDB()
     
 if __name__ == "__main__":
     main()

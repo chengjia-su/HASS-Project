@@ -36,7 +36,7 @@ class ShowResult():
     def ok(self, case, time):
         
         print case+"("+str(time.microseconds)+"ms) : "+self.OK
-    def error(self, case):
+    def error(self, case, time):
         print case+"(execution time:"+str(time.microseconds)+"ms) : "+self.ERROR
         
         
@@ -115,7 +115,7 @@ class TestCluster():
     def test_create(self):
         case = "Create HA cluster"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         
         start_time = datetime.now()
         result = testRM.createCluster(cluster_name)
@@ -130,7 +130,7 @@ class TestCluster():
     def test_delete_correctId(self):
         case = "Delete HA cluster with correct uuid"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
         
         start_time = datetime.now()
@@ -146,7 +146,7 @@ class TestCluster():
     def test_delete_wrongId(self):
         case = "Delete HA cluster with wrong uuid"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
         
         start_time = datetime.now()
@@ -162,12 +162,13 @@ class TestCluster():
     def test_read(self):
         case = "Show HA cluster"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
         
         start_time = datetime.now()
         result = testRM.listCluster()
         exec_time = datetime.now() - start_time
+
         if len(result) != 1 :
             self.fail_case += 1
             self.printer.error(case, exec_time)
@@ -190,11 +191,11 @@ class TestNode():
     def test_add_correctList(self):
         case = "Add nodes to HA cluster with correct node list"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
         
         start_time = datetime.now()
-        result = testRM.addNode(test_clusterId, correct_nodeList)
+        result = testRM.addNode(test_clusterId, correct_nodeList, hostList = environment_node)
         exec_time = datetime.now() - start_time
         if result["code"] == "0":
             self.pass_case += 1
@@ -206,11 +207,11 @@ class TestNode():
     def test_add_wrongClusterId(self):
         case = "Add nodes to HA cluster with wrong cluster ID"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
         
         start_time = datetime.now()
-        result = testRM.addNode(wrong_clusterId, correct_nodeList)
+        result = testRM.addNode(wrong_clusterId, correct_nodeList, hostList = environment_node)
         exec_time = datetime.now() - start_time
         if result["code"] == "1":
             self.pass_case += 1
@@ -222,16 +223,20 @@ class TestNode():
     def test_add_duplicateList(self):
         case = "Add nodes to HA cluster with duplicate node list"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
-        testRM.addNode(test_clusterId, correct_nodeList)
+        testRM.addNode(test_clusterId, correct_nodeList, hostList = environment_node)
         
         start_time = datetime.now()
-        result = testRM.addNode(test_clusterId, duplicate_nodeList)
+        result = testRM.addNode(test_clusterId, duplicate_nodeList, hostList = environment_node)
         exec_time = datetime.now() - start_time
-        if result["code"] == "1":
-            self.pass_case += 1
-            self.printer.ok(case, exec_time)
+        if result["code"] == "0":
+            if "Some node" in result["message"]:
+                self.pass_case += 1
+                self.printer.ok(case, exec_time)
+            else:
+                self.fail_case += 1
+                self.printer.error(case, exec_time)
         else:
             self.fail_case += 1
             self.printer.error(case, exec_time)
@@ -239,11 +244,11 @@ class TestNode():
     def test_add_wrongList(self):
         case = "Add nodes to HA cluster with wrong node list"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
         
         start_time = datetime.now()
-        result = testRM.addNode(test_clusterId, wrong_nodeList)
+        result = testRM.addNode(test_clusterId, wrong_nodeList, hostList = environment_node)
         exec_time = datetime.now() - start_time
         if result["code"] == "1":
             self.pass_case += 1
@@ -255,9 +260,9 @@ class TestNode():
     def test_delete_correct(self):
         case = "Delete node from HA cluster"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
-        testRM.addNode(test_clusterId, correct_nodeList)        
+        testRM.addNode(test_clusterId, correct_nodeList, hostList = environment_node)        
         
         start_time = datetime.now()
         result = testRM.deleteNode(test_clusterId, correct_nodeName)
@@ -272,9 +277,9 @@ class TestNode():
     def test_delete_wrongClusterId(self):
         case = "Delete node from HA cluster with wrong cluster uuid"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
-        testRM.addNode(test_clusterId, correct_nodeList)        
+        testRM.addNode(test_clusterId, correct_nodeList, hostList = environment_node)        
         
         start_time = datetime.now()
         result = testRM.deleteNode(wrong_clusterId, correct_nodeName)
@@ -289,9 +294,9 @@ class TestNode():
     def test_delete_wrongNodeName(self):
         case = "Delete node from HA cluster with wrong node name"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
-        testRM.addNode(test_clusterId, correct_nodeList)        
+        testRM.addNode(test_clusterId, correct_nodeList, hostList = environment_node)        
         
         start_time = datetime.now()
         result = testRM.deleteNode(test_clusterId, wrong_nodeName)
@@ -306,9 +311,9 @@ class TestNode():
     def test_read_correct(self):
         case = "Show node list from HA cluster"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
-        testRM.addNode(test_clusterId, correct_nodeList)        
+        testRM.addNode(test_clusterId, correct_nodeList, hostList = environment_node)        
         
         start_time = datetime.now()
         result = testRM.listNode(test_clusterId)
@@ -329,9 +334,9 @@ class TestNode():
     def test_read_wrongClusterId(self):
         case = "Show node list from HA cluster with wrong cluster uuid"
         self.case_counter += 1
-        testRM = Recovery(test = True, hostList = environment_node)
+        testRM = Recovery(test = True )
         test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
-        testRM.addNode(test_clusterId, correct_nodeList)        
+        testRM.addNode(test_clusterId, correct_nodeList, hostList = environment_node)        
         
         start_time = datetime.now()
         result = testRM.listNode(wrong_clusterId)

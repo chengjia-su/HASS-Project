@@ -67,8 +67,9 @@ class PollingThread(threading.Thread):
                     self.sock.sendall(line)
                     print "send request"
                     data, addr = self.sock.recvfrom(1024)
-                    if dara == "OK":
+                    if data == "OK":
                         self.count = 0
+                        time.sleep(self.interval)
                     elif "error" in data :
                         self.count = self.count + 1
                         print "no ACK"
@@ -79,6 +80,7 @@ class PollingThread(threading.Thread):
                         time.sleep(self.interval)
                     else:
                         print "Receive:"+data
+                        time.sleep(self.interval)
                         break
                 except:
                     print "sock fail"

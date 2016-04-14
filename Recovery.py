@@ -3,24 +3,30 @@ from keystoneclient.auth.identity import v2
 import logging
 import ConfigParser
 
-from DetectionManager import DetectionManager
+from Cluster import Cluster
+from AccessDB import AccessDB
 
 class Recovery (object):
 
-    def __init__ (self, test=False, hostList = []):
+    def __init__ (self, test=False):
         self.clusterList = {}
         self.config = ConfigParser.RawConfigParser()
         self.config.read('hass.conf')
         self.test = test
-        if self.test==False:
-            self.novaClient = client.Client(2, self.config.get("openstack", "openstack_admin_account"), self.config.get("openstack", "openstack_admin_password"), self.config.get("openstack", "openstack_admin_account"), "http://controller:5000/v2.0")
-            hypervisorList = self.novaClient.hypervisors.list()        
-            self.hostList = []
-            for hypervisor in hypervisorList:
-                self.hostList.append(str(hypervisor.hypervisor_hostname))
-        else:
-            self.hostList = hostList
-        
+        self.novaClient = client.Client(2, self.config.get("openstack", "openstack_admin_account"), self.config.get("openstack", "openstack_admin_password"), self.config.get("openstack", "openstack_admin_account"), "http://controller:5000/v2.0")
+        self.haNode = []
+        self.db = AccessDB()
+        if self.test == False:
+            try:
+                self.db.createTable()
+            except:
+                print "Access Database Failed"
+                self.db.closeDB()
+            try:    
+                self.db.readDB(self)
+            except:
+                print "System initialize Failed"
+                self.db.closeDB()
         
     def createCluster(self, clusterName):
         import uuid
@@ -28,6 +34,16 @@ class Recovery (object):
         newCluster = Cluster(uuid = newClusterUuid, name = clusterName)
         self.clusterList[newClusterUuid] = newCluster
         result = {"code": "0", "clusterId":newClusterUuid, "message":""}
+        
+        if self.test==False:
+        #Unit test should not access database
+            try:
+                db_uuid = result["clusterId"].replace("-","")
+                data = {"cluster_uuid":db_uuid, "cluster_name":clusterName}
+                self.db.writeDB("ha_cluster", data)
+            except:
+                logging.error("Recovery Recovery - Access database failed.")
+                result = {"code": "1", "clusterId":newClusterUuid, "message":"Access database failed, please wait a minute and try again."}
         return result
             
     def deleteCluster(self, uuid):
@@ -38,10 +54,20 @@ class Recovery (object):
             logging.info("Recovery Recovery - The cluster %s is deleted." % uuid)
             code = "0"
             message = "The cluster %s is deleted." % uuid
+            if self.test==False:
+            #Unit test should not access database
+                try:
+                    db_uuid = uuid.replace("-","")
+                    self.db.deleteData("DELETE FROM ha_cluster WHERE cluster_uuid = %s", db_uuid)
+                except:
+                    logging.error("Recovery Recovery - Access database failed.")
+                    code = "1"
+                    message = "Access database failed."
         except:
             logging.info("Recovery Recovery - The cluster is not found (uuid = %s)." % uuid)
             code = "1"
             message = "The cluster is not found (uuid = %s)." % uuid
+            
         finally:
             result = {"code": code, "clusterId":uuid, "message":message}
             return result
@@ -52,22 +78,53 @@ class Recovery (object):
             result.append((uuid, cluster.name))
         return result
         
-    def addNode(self, clusterId, nodeList):
+    def addNode(self, clusterId, nodeList, write_db = True, hostList = []):
         code = ""
         message = ""
-        notMatchNode = [nodeName for nodeName in nodeList if nodeName not in self.hostList]
+        #query openstack node list
+        if self.test == False:
+            hypervisorList = self.novaClient.hypervisors.list() 
+            for hypervisor in hypervisorList:
+                hostList.append(str(hypervisor.hypervisor_hostname))
+        else:
+            write_db = False
+        notMatchNode = [nodeName for nodeName in nodeList if nodeName not in hostList]
         if not notMatchNode:
             try:
-                self.clusterList[clusterId].addNode(nodeList, test = self.test)
-                logging.info("Recovery Recovery - The node %s is added to cluster." % ', '.join(str(node) for node in nodeList))
-                self.hostList = [nodeName for nodeName in self.hostList if nodeName not in nodeList]
-                code = "0"
-                message = "The node %s is added to cluster." % ', '.join(str(node) for node in nodeList)
-            
+                duplication_node = []
+                correct_node = []
+                for nodeName in nodeList:
+                    if nodeName in self.haNode:
+                        duplication_node.append(nodeName)
+                    else:
+                        correct_node.append(nodeName)
+
+                self.clusterList[clusterId].addNode(correct_node, test = self.test)
+                self.haNode.extend(correct_node)
+
+                if duplication_node == []:
+                    logging.info("Recovery Recovery - The node %s is added to cluster." % ', '.join(str(node) for node in nodeList))
+                    code = "0"
+                    message = "The node %s is added to cluster." % ', '.join(str(node) for node in nodeList)
+                else:
+                    logging.info("Recovery Recovery - overlapping node %s does not add to cluster" % ', '.join(str(node) for node in duplication_node))
+                    code = "1"
+                    message = "overlapping node %s does not add to cluster" % ', '.join(str(node) for node in duplication_node)
+                if write_db == True:
+                    try:
+                        db_uuid = clusterId.replace("-", "")
+                        for node in correct_node:
+                            data = {"node_name": node,"below_cluster":db_uuid}
+                            self.db.writeDB("ha_node", data)
+                    except:
+                        logging.error("Recovery Recovery - Access database failed.")
+                        code = "1"
+                        message = "Access database failed."
             except:
                 logging.info("Recovery Recovery - The cluster is not found (uuid = %s)." % clusterId)
                 code = "1"
                 message = "The cluster is not found (uuid = %s)." % clusterId
+                
             finally:
                 result = {"code":code, "clusterId":clusterId, "message":message}
                 return result
@@ -82,7 +139,6 @@ class Recovery (object):
     def deleteNode(self, clusterId, nodeName):
         code = ""
         message = ""
-        
         try:
             if nodeName not in self.clusterList[clusterId].nodeList:
                 logging.info("Recovery Recovery - Delete node from cluster failed. The node is not found. (uuid = %s)" % nodeName)
@@ -90,9 +146,20 @@ class Recovery (object):
                 message = "Delete node from cluster failed. The node is not found. (uuid = %s)" % nodeName
             else :
                 self.clusterList[clusterId].deleteNode(nodeName, test = self.test)
+                self.haNode.remove(nodeName)
                 logging.info("Recovery Recovery - The node %s is deleted from cluster." % nodeName)
                 code = "0"
                 message = "The node %s is deleted from cluster." % nodeName
+                if self.test == False:
+                    try:
+                        db_uuid = clusterId.replace("-", "")
+                        self.db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodeName, db_uuid))
+                    except:
+                        logging.error("Recovery Recovery - Access database failed.")
+                        code = "1"
+                        message = "Access database failed."
+            
+
         except:
             logging.info("Recovery Recovery - Delete node from cluster failed. The cluster is not found. (uuid = %s)" % clusterId)
             code = "1"
@@ -199,6 +266,8 @@ class Recovery (object):
                     print e
                     logging.error("Recovery Recovery - The instance %s evacuate failed" % instanceId)
         self.clusterList[clusterId].deleteNode(nodeName)
+        db_uuid = clusterId.replace("-", "")
+        self.db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodeName, db_uuid))
         
     def _evacuate(self, instanceId, nodeList):
         from Schedule import Schedule
@@ -210,37 +279,5 @@ class Recovery (object):
         except:
             raise
     
-class Cluster(object):
 
-    def __init__(self, uuid, name):
-        self.id = uuid
-        self.name = name
-        self.nodeList = []
-        self.instanceList = []
-        self.detect = DetectionManager()
-        
-    def addNode(self, nodeList, test=False):
-        if test == False:
-            for node in nodeList :
-                self.detect.pollingRegister(self.id, node)
-        self.nodeList.extend(nodeList)
-        
-    def deleteNode(self, nodeName, test=False):
-        if test == False:
-            self.detect.pollingCancel(self.id, nodeName)
-        self.nodeList.remove(nodeName)
-    
-    def getNode(self):
-        nodeStr = ','.join(self.nodeList)
-        return nodeStr
-    
-    def addInstance(self, id, node):
-        self.instanceList.append((id, node))
-        
-    def deleteInstance(self, instance):
-        self.instanceList.remove(instance)
-        
-    def getInstance(self):
-        instanceStr = ",".join("%s:%s" % tup for tup in self.instanceList)
-        return instanceStr
         
