@@ -27,6 +27,7 @@ wrong_clusterId = "1a2b3c4d-5678-9101-2b3c-zxcvb987654a"
 test_instanceId = "0e4011a4-3128-4674-ab16-dd1b7ecc126e"
 duplicate_instanceId = "0e4011a4-3128-4674-ab16-dd1b7ecc126e"
 wrong_instanceId = "1a2b3c4d-5678-9101-2b3c-zxcvb987654a"
+
 #--------------------------------------------------------------
 
 class ShowResult():
@@ -230,8 +231,8 @@ class TestNode():
         start_time = datetime.now()
         result = testRM.addNode(test_clusterId, duplicate_nodeList, hostList = environment_node)
         exec_time = datetime.now() - start_time
-        if result["code"] == "0":
-            if "Some node" in result["message"]:
+        if result["code"] == "1":
+            if "overlapping node" in result["message"]:
                 self.pass_case += 1
                 self.printer.ok(case, exec_time)
             else:
@@ -347,15 +348,155 @@ class TestNode():
         else:
             self.fail_case += 1
             self.printer.error(case, exec_time)
-'''
+
 class TestInstance():
 
     def __init__(self):
+        self.printer = ShowResult()
+        self.case_counter = 0
+        self.pass_case = 0
+        self.fail_case = 0
         
-    def test_create(self):
+    def test_add_correct(self):
+        case = "Add the instance to HA cluster"
+        self.case_counter += 1
+        testRM = Recovery(test = True )
+        test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
+        
+        start_time = datetime.now()
+        result = testRM.addInstance(test_clusterId, test_instanceId)
+        exec_time = datetime.now() - start_time
+        if result["code"] == "0":
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+        else:
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+            
+    def test_add_wrongClusterId(self):
+        case = "Add the instance to HA cluster with wrong cluster ID"
+        self.case_counter += 1
+        testRM = Recovery(test = True )
+        test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
+        
+        start_time = datetime.now()
+        result = testRM.addInstance(wrong_clusterId, test_instanceId)
+        exec_time = datetime.now() - start_time
+        if result["code"] == "1":
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+        else:
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+            
+    def test_add_duplicateInstance(self):
+        case = "Add the instance to HA cluster with duplicate instance id"
+        self.case_counter += 1
+        testRM = Recovery(test = True )
+        test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
+        testRM.addInstance(test_clusterId, test_instanceId)
+        
+        start_time = datetime.now()
+        result = testRM.addInstance(test_clusterId, duplicate_instanceId)
+        exec_time = datetime.now() - start_time
+        if result["code"] == "1":
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+        else:
+            self.fail_case += 1
+            self.printer.error(case, exec_time) 
+            
+    def test_delete_correct(self):
+        case = "Delete the instance from HA cluster"
+        self.case_counter += 1
+        testRM = Recovery(test = True )
+        test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
+        testRM.addInstance(test_clusterId, test_instanceId)        
+        
+        start_time = datetime.now()
+        result = testRM.deleteInstance(test_clusterId, test_instanceId)
+        exec_time = datetime.now() - start_time
+
+        if result["code"] == "0":
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+        else:
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+    def test_delete_wrongInstanceId(self):
+        case = "Delete the instance from HA cluster with wrong instance uuid"
+        self.case_counter += 1
+        testRM = Recovery(test = True )
+        test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
+        testRM.addInstance(test_clusterId, test_instanceId)     
+        
+        start_time = datetime.now()
+        result = testRM.deleteInstance(test_clusterId, wrong_instanceId)
+        exec_time = datetime.now() - start_time
+        if result["code"] == "1":
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+        else:
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
     
-    def test_delete(self):
-'''    
+    def test_delete_wrongClusterId(self):
+        case = "Delete the instance from HA cluster with wrong cluster uuid"
+        self.case_counter += 1
+        testRM = Recovery(test = True )
+        test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
+        testRM.addInstance(test_clusterId, test_instanceId)     
+        
+        start_time = datetime.now()
+        result = testRM.deleteInstance(wrong_clusterId, test_instanceId)
+        exec_time = datetime.now() - start_time
+        if result["code"] == "1":
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+        else:
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+    
+    def test_read_correct(self):
+        case = "Show instance list from HA cluster"
+        self.case_counter += 1
+        testRM = Recovery(test = True )
+        test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
+        testRM.addInstance(test_clusterId, test_instanceId)           
+        
+        start_time = datetime.now()
+        result = testRM.listInstance(test_clusterId)
+        exec_time = datetime.now() - start_time
+        
+        resultList = result["instanceList"].split(",")
+        if resultList[0] != test_instanceId+":testHost":
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+        else :
+            if result["code"] == "0":
+                self.pass_case += 1
+                self.printer.ok(case, exec_time)
+            else:
+                self.fail_case += 1
+                self.printer.error(case, exec_time)
+                
+    def test_read_wrongClusterId(self):
+        case = "Show instance list from HA cluster with wrong cluster uuid"
+        self.case_counter += 1
+        testRM = Recovery(test = True )
+        test_clusterId = testRM.createCluster(cluster_name)["clusterId"]
+        testRM.addInstance(test_clusterId, test_instanceId)           
+        
+        start_time = datetime.now()
+        result = testRM.listInstance(wrong_clusterId)
+        exec_time = datetime.now() - start_time
+        if result["code"] == "1":
+            self.pass_case += 1
+            self.printer.ok(case, exec_time)
+        else:
+            self.fail_case += 1
+            self.printer.error(case, exec_time)
+            
 def main():
     def percentage(part, whole):
         result = 100 * float(part)/float(whole)
@@ -397,12 +538,29 @@ def main():
     print "[HAaaS-TC-07]"
     node_tester.test_read_correct()
     node_tester.test_read_wrongClusterId()
+    
+    
+    instance_tester = TestInstance()
+    print "------------------------------------------------------------------------------------"
+    print "[HAaaS-TC-08]"
+    instance_tester.test_add_correct()
+    instance_tester.test_add_wrongClusterId()
+    instance_tester.test_add_duplicateInstance()
+    print "------------------------------------------------------------------------------------"
+    print "[HAaaS-TC-09]"
+    instance_tester.test_delete_correct()
+    instance_tester.test_delete_wrongInstanceId()
+    instance_tester.test_delete_wrongClusterId()
+    print "------------------------------------------------------------------------------------"
+    print "[HAaaS-TC-10]"
+    instance_tester.test_read_correct()
+    instance_tester.test_read_wrongClusterId()
     print "------------------------------------------------------------------------------------"
     print "Test Finish!"
 
-    total_case = auth_tester.case_counter + cluster_tester.case_counter + node_tester.case_counter
-    pass_case = auth_tester.pass_case + cluster_tester.pass_case + node_tester.pass_case
-    fail_case = auth_tester.fail_case + cluster_tester.fail_case + node_tester.fail_case
+    total_case = auth_tester.case_counter + cluster_tester.case_counter + node_tester.case_counter + instance_tester.case_counter
+    pass_case = auth_tester.pass_case + cluster_tester.pass_case + node_tester.pass_case + instance_tester.pass_case
+    fail_case = auth_tester.fail_case + cluster_tester.fail_case + node_tester.fail_case + instance_tester.fail_case
     
     reportTable = PrettyTable()
     reportTable.field_names = ["Total Case", "Pass Case", "Fail Case", "Pass Rate"]

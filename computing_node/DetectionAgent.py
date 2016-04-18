@@ -35,7 +35,7 @@ class PollingHandler(asyncore.dispatcher):
                 check_result = "error:" + check_result
                 self.sendto(check_result, addr)
     
-    def check_services(self):
+    def check_services(self, test=False):
         import libvirt
         import subprocess
         message = ""
@@ -43,16 +43,31 @@ class PollingHandler(asyncore.dispatcher):
         conn = libvirt.open(self.libvirt_uri)
         if conn == None:
             message = "libvirt;"
+            if test==True:
+                print "Test libvirt fail."
+        else:
+            if test==True:
+                print "Test libvirt success."
         conn.close()
         #check nova-compute
         output = subprocess.check_output(['ps', '-A'])
         if "nova-compute" not in output:
             message += "nova;"
+            if test==True:
+                print "Test nova-compute fail."
+        else:
+            if test==True:
+                print "Test nova-compute success."
         #check qemu-kvm    
         output = subprocess.check_output(['service', 'qemu-kvm', 'status'])
         if "start/running" not in output:
             message += "qemukvm;"
-        
+            if test==True:
+                print "Test qemu-kvm fail."
+        else:
+            if test==True:
+                print "Test qemu-kvm success."
+                
         return message
         
         
