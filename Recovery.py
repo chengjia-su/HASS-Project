@@ -50,6 +50,8 @@ class Recovery (object):
         code = ""
         message = ""
         try:
+            for node in self.clusterList[uuid].nodeList:
+                self.haNode.remove(node)
             del self.clusterList[uuid]
             logging.info("Recovery Recovery - The cluster %s is deleted." % uuid)
             code = "0"
