@@ -19,6 +19,10 @@ class Cluster(object):
         if test == False:
             self.detect.pollingCancel(self.id, nodeName)
         self.nodeList.remove(nodeName)
+        for instance in self.instanceList:
+            instanceId, belowNode = instance
+            if belowNode == nodeName:
+                self.instanceList.remove((instanceId, belowNode))
     
     def getNode(self):
         nodeStr = ','.join(self.nodeList)

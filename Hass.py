@@ -1,3 +1,4 @@
+#!/usr/bin/python
 """This module will read data from database, update data according environment, 
 and read configuration file in the beginning. It is a service that listen to user
 request and support authentication by HTTP portocal basic access authentication.

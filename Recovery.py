@@ -216,7 +216,8 @@ class Recovery (object):
                 else:
                     from Schedule import Schedule
                     try:
-                        target_host = Schedule.default(self.clusterList[clusterId].nodeList)
+                        scheduler = Schedule()
+                        target_host = scheduler.default(self.clusterList[clusterId].nodeList)
                         vm.live_migrate(host = target_host)
                         self.clusterList[clusterId].addInstance(instanceId, host)
                         code = "0"
