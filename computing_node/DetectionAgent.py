@@ -43,7 +43,7 @@ class PollingHandler(asyncore.dispatcher):
         conn = libvirt.open(self.libvirt_uri)
         if conn == None:
             message = "libvirt;"
-            subprocess(['service', 'libvirt-bin', 'restart'])
+            subprocess.check_output(['service', 'libvirt-bin', 'restart'])
             if test==True:
                 print "Test libvirt fail."
         else:
@@ -54,7 +54,7 @@ class PollingHandler(asyncore.dispatcher):
         output = subprocess.check_output(['ps', '-A'])
         if "nova-compute" not in output:
             message += "nova;"
-            subprocess(['service', 'nova-compute', 'restart'])
+            subprocess.check_output(['service', 'nova-compute', 'restart'])
             if test==True:
                 print "Test nova-compute fail."
         else:
@@ -64,7 +64,7 @@ class PollingHandler(asyncore.dispatcher):
         output = subprocess.check_output(['service', 'qemu-kvm', 'status'])
         if "start/running" not in output:
             message += "qemukvm;"
-            subprocess(['service', 'qemu-kvm', 'restart'])
+            subprocess.check_output(['service', 'qemu-kvm', 'restart'])
             if test==True:
                 print "Test qemu-kvm fail."
         else:

@@ -275,29 +275,31 @@ class Recovery (object):
     def recoveryNode(self, clusterId, nodeName):
         print clusterId
         print nodeName
-
+        if len(self.clusterList[clusterId].nodeList)<2:
+            logging.error("Recovery Recovery - evacuate failed (cluster only 1 node)")
+            return
         for instance in self.clusterList[clusterId].instanceList:
             instanceId, belowNode = instance
             if belowNode == nodeName:
                 try:
-                    self._evacuate(instanceId, self.clusterList[clusterId].nodeList)
+                    self._evacuate(instanceId, self.clusterList[clusterId].nodeList, nodeName)
                     logging.info("Recovery Recovery - The instance %s evacuate success" % instanceId)
  
                 except Exception as e:
                     print e
                     logging.error("Recovery Recovery - The instance %s evacuate failed" % instanceId)
-        self.clusterList[clusterId].deleteNode(nodeName)
         db_uuid = clusterId.replace("-", "")
         self.haNode.remove(nodeName)
         self.db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodeName, db_uuid))
         
-    def _evacuate(self, instanceId, nodeList):
+    def _evacuate(self, instanceId, nodeList, failednode):
         from Schedule import Schedule
+        import subprocess
         schedule = Schedule()
         instance = self.novaClient.servers.get(instanceId)
-        target_host = schedule.default(nodeList)
+        target_host = schedule.default(nodeList, failednode)
         try:
-            instance.evacuate(host = target_host)
+            subprocess.check_output(["nova", "evacuate", instanceId, target_host])
         except:
             raise
     

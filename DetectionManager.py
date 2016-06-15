@@ -39,6 +39,7 @@ class PollingThread(threading.Thread):
     def __init__(self, interval, threshold, clusterId, node, port):
         threading.Thread.__init__(self)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setblocking(0)
         self.threshold = int(threshold)
         self.interval = float(interval)
         self.clusterId = clusterId
@@ -51,7 +52,7 @@ class PollingThread(threading.Thread):
     def run(self):
         data = ""
         while self.exit:
-            while self.count < self.threshold :
+            while self.count < self.threshold and self.exit :
                 try:
                     print "sock connect"
                     self.sock.connect((self.node, self.port))
@@ -61,7 +62,7 @@ class PollingThread(threading.Thread):
                     self.count = self.count + 1
                     time.sleep(self.interval)
 
-            while self.count < self.threshold :
+            while self.count < self.threshold and self.exit:
                 try:
                     line = "polling request"
                     self.sock.sendall(line)
