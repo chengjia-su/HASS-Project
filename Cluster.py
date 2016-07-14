@@ -26,11 +26,12 @@ class Cluster(object):
         return nodeStr
     
     def addInstance(self, id, node):
-        self.instanceList.append((id, node))
+        self.instanceList.append([id, node])
         
     def deleteInstance(self, instance):
         self.instanceList.remove(instance)
         
     def getInstance(self):
-        instanceStr = ",".join("%s:%s" % tup for tup in self.instanceList)
+        instanceStr = ",".join("%s:%s" % (instance[0],instance[1]) for instance in self.instanceList)
         return instanceStr
+        

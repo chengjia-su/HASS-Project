@@ -26,7 +26,7 @@ class PollingHandler(asyncore.dispatcher):
         
     def handle_read(self):
         data, addr = self.recvfrom(2048)
-        print 'request from: ', addr
+        #print 'request from: ', addr
         check_result = self.check_services()
         if data == "polling request":
             if check_result == "":

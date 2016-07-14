@@ -196,18 +196,33 @@ class Recovery (object):
             message = "Add the instance to cluster failed. The cluster is not found. (uuid = %s)" % clusterId
             result = {"code": code, "clusterId":clusterId, "message":message}
             return result
+        #power_states = [
+        #'NOSTATE',      # 0x00
+        #'Running',      # 0x01
+        #'',             # 0x02
+        #'Paused',       # 0x03
+        #'Shutdown',     # 0x04
+        #'',             # 0x05
+        #'Crashed',      # 0x06
+        #'Suspended'     # 0x07
+        vm = self.novaClient.servers.get(instanceId)
+        power_state = getattr(vm,"OS-EXT-STS:power_state")
+        if power_state != 1:
+            logging.info("Recovery Recovery - The instance %s can not be protected. (Not Running)" % instanceId)
+            code = "1"
+            message = "The instance %s can not be protected. (Not Running)" % instanceId
             
-        if [instance for instance in self.clusterList[clusterId].instanceList if instance[0]==instanceId] != [] :
+        elif [instance for instance in self.clusterList[clusterId].instanceList if instance[0]==instanceId] != [] :
             logging.info("Recovery Recovery - The instance %s is already protected." % instanceId)
             code = "1"
             message = "The instance %s is already protected." % instanceId
+            
         elif self.test == False and self.novaClient.volumes.get_server_volumes(instanceId) == []:
             logging.info("Recovery Recovery - The instance %s can not be protected. (No volume)" % instanceId)
             code = "1"
             message = "The instance %s can not be protected. (No volume)" % instanceId
         else:
             if self.test == False:
-                vm = self.novaClient.servers.get(instanceId)
                 host = getattr(vm,"OS-EXT-SRV-ATTR:host")
                 if host in self.clusterList[clusterId].nodeList:
                     self.clusterList[clusterId].addInstance(instanceId, host)
@@ -219,7 +234,8 @@ class Recovery (object):
                         scheduler = Schedule()
                         target_host = scheduler.default(self.clusterList[clusterId].nodeList)
                         vm.live_migrate(host = target_host)
-                        self.clusterList[clusterId].addInstance(instanceId, host)
+                        self.clusterList[clusterId].addInstance(instanceId, target_host)
+                        #self._update_Instance(clusterId)
                         code = "0"
                         message = "The instance %s is migrated to host:%s and protected." % (instanceId, target_host)
                     except:
@@ -284,13 +300,21 @@ class Recovery (object):
                 try:
                     self._evacuate(instanceId, self.clusterList[clusterId].nodeList, nodeName)
                     logging.info("Recovery Recovery - The instance %s evacuate success" % instanceId)
- 
+                    self._update_Instance(clusterId)
+                    
                 except Exception as e:
                     print e
                     logging.error("Recovery Recovery - The instance %s evacuate failed" % instanceId)
         db_uuid = clusterId.replace("-", "")
         self.haNode.remove(nodeName)
         self.db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodeName, db_uuid))
+        
+    def _update_Instance(self, clusterId):
+        for instance in self.clusterList[clusterId].instanceList:
+            vm = self.novaClient.servers.get(instance[0])
+            host = getattr(vm,"OS-EXT-SRV-ATTR:host")
+            instance[1] = host
+            
         
     def _evacuate(self, instanceId, nodeList, failednode):
         from Schedule import Schedule
@@ -299,6 +323,7 @@ class Recovery (object):
         instance = self.novaClient.servers.get(instanceId)
         target_host = schedule.default(nodeList, failednode)
         try:
+            #instance.evacuate(host = target_host, on_shared_storage = True)
             subprocess.check_output(["nova", "evacuate", instanceId, target_host])
         except:
             raise

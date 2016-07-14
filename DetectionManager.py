@@ -54,11 +54,11 @@ class PollingThread(threading.Thread):
         while self.exit:
             while self.count < self.threshold and self.exit :
                 try:
-                    print "sock connect"
+                    print "["+self.node+"] create socket connection"
                     self.sock.connect((self.node, self.port))
                     break
                 except:
-                    print "sock fail"
+                    print "["+self.node+"] connection failed"
                     self.count = self.count + 1
                     time.sleep(self.interval)
 
@@ -66,25 +66,26 @@ class PollingThread(threading.Thread):
                 try:
                     line = "polling request"
                     self.sock.sendall(line)
-                    print "send request"
+                    #print "["+self.node+"] sent request"
                     data, addr = self.sock.recvfrom(1024)
                     if data == "OK":
                         self.count = 0
+                        #print "["+self.node+"] OK"
                         time.sleep(self.interval)
                     elif "error" in data :
                         self.count = self.count + 1
-                        print "no ACK"
+                        print "["+self.node+"]no ACK"
                         time.sleep(self.interval)
                     elif not data:
                         self.count = self.count + 1
-                        print "no data"
+                        print "["+self.node+"]no data"
                         time.sleep(self.interval)
                     else:
-                        print "Receive:"+data
+                        print "["+self.node+"]Receive:"+data
                         time.sleep(self.interval)
                         break
                 except:
-                    print "sock fail"
+                    print "["+self.node+"] connection failed"
                     self.count = self.count + 1
                     time.sleep(self.interval)
                     

@@ -78,7 +78,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
     # parser request, get authentication header and send to authenticate().
         if SimpleXMLRPCRequestHandler.parse_request(self):
             if self.authenticate(self.headers):
-                logging.info("Hass RequestHandler - Authentication success, request from %s", self.clientip)
+                #logging.info("Hass RequestHandler - Authentication success, request from %s", self.clientip)
                 return True
             else:
                 self.send_error(401, 'Authentication failed')
@@ -155,12 +155,12 @@ class Hass (object):
     
 def main():
     
-    server = SimpleXMLRPCServer(('',int(config.get("rpc", "rpc_bind_port"))), requestHandler=RequestHandler, allow_none = True)
+    server = SimpleXMLRPCServer(('',int(config.get("rpc", "rpc_bind_port"))), requestHandler=RequestHandler, allow_none = True, logRequests=False)
     server.register_introspection_functions()
     server.register_multicall_functions()
     server.register_instance(Hass(), allow_dotted_names=True)
 
-    print "Server ready"
+    print "HASS Server ready"
     try:
         server.serve_forever()
     except:
