@@ -1,9 +1,15 @@
+#!/usr/bin/python
+"""
+Create/Delete/List cluster, node and instance.
+Using openstack API to communicate with openstack
+"""
+
 from novaclient import client
 from keystoneclient.auth.identity import v2
 import logging
 import ConfigParser
 
-from Cluster import Cluster
+from Cluster import Cluster   # cluster data structure class
 from AccessDB import AccessDB
 
 class Recovery (object):
@@ -12,21 +18,15 @@ class Recovery (object):
         self.clusterList = {}
         self.config = ConfigParser.RawConfigParser()
         self.config.read('hass.conf')
-        self.test = test
+        self.test = test   # Unit tester pass test=true. 
         self.novaClient = client.Client(2, self.config.get("openstack", "openstack_admin_account"), self.config.get("openstack", "openstack_admin_password"), self.config.get("openstack", "openstack_admin_account"), "http://controller:5000/v2.0")
-        self.haNode = []
+        self.haNode = []  # Record which node is already added to cluster.
+        #if accessDB or create table failed. system will force exit.
         self.db = AccessDB()
+        
         if self.test == False:
-            try:
-                self.db.createTable()
-            except:
-                print "Access Database Failed"
-                self.db.closeDB()
-            try:    
-                self.db.readDB(self)
-            except:
-                print "System initialize Failed"
-                self.db.closeDB()
+            self.db.createTable()   
+            self.db.readDB(self)
         
     def createCluster(self, clusterName):
         import uuid
@@ -196,6 +196,9 @@ class Recovery (object):
             message = "Add the instance to cluster failed. The cluster is not found. (uuid = %s)" % clusterId
             result = {"code": code, "clusterId":clusterId, "message":message}
             return result
+
+        vm = self.novaClient.servers.get(instanceId)
+        power_state = getattr(vm,"OS-EXT-STS:power_state")
         #power_states = [
         #'NOSTATE',      # 0x00
         #'Running',      # 0x01
@@ -205,8 +208,6 @@ class Recovery (object):
         #'',             # 0x05
         #'Crashed',      # 0x06
         #'Suspended'     # 0x07
-        vm = self.novaClient.servers.get(instanceId)
-        power_state = getattr(vm,"OS-EXT-STS:power_state")
         if power_state != 1:
             logging.info("Recovery Recovery - The instance %s can not be protected. (Not Running)" % instanceId)
             code = "1"

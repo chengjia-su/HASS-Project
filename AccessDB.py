@@ -1,7 +1,14 @@
+#!/usr/bin/python
+"""
+Connect to database, create table, write data to database and read data from database
+"""
+
 import logging
 import ConfigParser
 from Recovery import Cluster
 import MySQLdb, MySQLdb.cursors
+
+import * from HassException
 
 config = ConfigParser.RawConfigParser()
 config.read('hass.conf')
@@ -46,22 +53,32 @@ class AccessDB(object):
                             );
                             """)
         except MySQLdb.Error, e:
-            logging.error("Hass AccessDB - Read data failed (MySQL Error: %s)", str(e))
+            self.closeDB()
+            logging.error("Hass AccessDB - Create Table failed (MySQL Error: %s)", str(e))
             print "MySQL Error: %s" % str(e)
+            sys.exit(1)
             
     def readDB(self, recovery):
-        self.db.execute("SELECT * FROM ha_cluster;")
-        ha_cluster_date = self.db.fetchall()
-        for cluster in ha_cluster_date:
-            nodeList = []
-            self.db.execute("SELECT * FROM ha_node WHERE below_cluster = '%s'" % cluster["cluster_uuid"])
-            ha_node_date = self.db.fetchall()
-            for node in ha_node_date:
-                nodeList.append(node["node_name"])
-            uuid = cluster["cluster_uuid"][:8]+"-"+cluster["cluster_uuid"][8:12]+"-"+cluster["cluster_uuid"][12:16]+"-"+cluster["cluster_uuid"][16:20]+"-"+cluster["cluster_uuid"][20:]
-            newCluster = Cluster(uuid = uuid, name = cluster["cluster_name"])
-            recovery.clusterList[uuid] = newCluster
-            recovery.addNode(uuid, nodeList, write_db=False)
+        
+        try:
+            self.db.execute("SELECT * FROM ha_cluster;")
+            ha_cluster_date = self.db.fetchall()
+            for cluster in ha_cluster_date:
+                nodeList = []
+                self.db.execute("SELECT * FROM ha_node WHERE below_cluster = '%s'" % cluster["cluster_uuid"])
+                ha_node_date = self.db.fetchall()
+                for node in ha_node_date:
+                    nodeList.append(node["node_name"])
+                uuid = cluster["cluster_uuid"][:8]+"-"+cluster["cluster_uuid"][8:12]+"-"+cluster["cluster_uuid"][12:16]+"-"+cluster["cluster_uuid"][16:20]+"-"+cluster["cluster_uuid"][20:]
+                newCluster = Cluster(uuid = uuid, name = cluster["cluster_name"])
+                recovery.clusterList[uuid] = newCluster
+                recovery.addNode(uuid, nodeList, write_db=False)
+                
+        except MySQLdb.Error, e:
+            self.closeDB()
+            logging.error("Hass AccessDB - Read data failed (MySQL Error: %s)", str(e))
+            print "MySQL Error: %s" % str(e)
+            sys.exit(1)
             
     def writeDB(self, dbname, data):
         if dbname == "ha_cluster":

@@ -1,13 +1,9 @@
 #!/usr/bin/python
-"""This module will read data from database, update data according environment, 
-and read configuration file in the beginning. It is a service that listen to user
-request and support authentication by HTTP portocal basic access authentication.
-
-Parameters:
-    config - this is the configuration file object
-
-Returns:
-    The module will return string as reponse according request. """
+"""
+HASS Service
+Using SimpleXMLRPC library handle http requests
+Client can use function in Hass class directly
+"""
 
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
@@ -90,8 +86,11 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
 
 class Hass (object):
 #   The SimpleRPCServer class
-#   Declare method here, and client can call it directly. 
+#   Declare method here, and client can call it directly.
+#   All of methods just process return data from recovery module
+
     def test_auth_response(self):
+    #Unit tester call this function to get successful message if authenticate success.
         return "auth success"
         
     def createCluster(self, name, nodeList=[], test=False):
