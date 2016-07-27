@@ -232,8 +232,11 @@ class Recovery (object):
                 else:
                     from Schedule import Schedule
                     try:
-                        scheduler = Schedule()
-                        target_host = scheduler.default(self.clusterList[clusterId].nodeList)
+                    #------------------not test yet-------------------------------
+                        pollicy = self.config.get("schedule", "pollicy")
+                        scheduler = getattr(Schedule, pollicy)
+                        target_host = scheduler()
+                    #-------------------------------------------------------------
                         vm.live_migrate(host = target_host)
                         self.clusterList[clusterId].addInstance(instanceId, target_host)
                         #self._update_Instance(clusterId)
@@ -309,6 +312,7 @@ class Recovery (object):
         db_uuid = clusterId.replace("-", "")
         self.haNode.remove(nodeName)
         self.db.deleteData("DELETE FROM ha_node WHERE node_name = %s && below_cluster = %s", (nodeName, db_uuid))
+        #subprocess.check_output(["nova", "service-force-down", nodeName])
         
     def _update_Instance(self, clusterId):
         for instance in self.clusterList[clusterId].instanceList:
